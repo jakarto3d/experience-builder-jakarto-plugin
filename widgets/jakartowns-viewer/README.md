@@ -6,8 +6,31 @@ panorama, naviguer dans le panorama recentre la carte.
 
 ## Statut
 
-Scaffold en cours — voir [`docs/progress.md`](../../docs/progress.md) à la
-racine du dépôt pour le journal détaillé et l'état exact de chaque partie.
+MVP fonctionnel *sur le papier* : manifest, liaison à un widget Map,
+authentification par clé API Jakarto, embed du viewer, et synchronisation
+bidirectionnelle (clic carte → panorama, navigation panorama → carte) sont
+tous écrits. **Rien n'a encore été compilé ni testé dans un vrai builder**
+(pas de Developer Edition disponible) — voir la checklist de vérification
+ci-dessous avant toute mise en production. Voir
+[`docs/progress.md`](../../docs/progress.md) à la racine du dépôt pour le
+journal détaillé de chaque étape.
+
+### Checklist à vérifier une fois déployé dans un environnement réel
+
+- [ ] Le widget compile sans erreur TypeScript une fois copié dans
+      `client/your-extensions/widgets/` (types `jimu-core`/`jimu-arcgis`/`jimu-ui`
+      réels, non vérifiables ici).
+- [ ] Le cookie de session Jakarto (partitionné) survit bien au contexte
+      d'un widget hébergé sous le domaine du portail (`sig.mascouche.ca`) —
+      risque de blocage cross-site selon la politique du navigateur.
+- [ ] Le clic sur la carte liée n'entre pas en conflit avec d'autres widgets
+      qui écoutent aussi les clics sur la même `MapView` (ex. widget de
+      sélection d'entités).
+- [ ] Le `goTo` déclenché par les événements `position` de Jakartowns reste
+      fluide si l'utilisateur navigue en continu dans le panorama (l'anti-rebond
+      actuel est fixé à 300 ms, à ajuster si besoin).
+- [ ] Le formulaire de connexion s'affiche/se comporte correctement dans les
+      tailles réduites du widget (voir `defaultSize` dans `manifest.json`).
 
 ## Installation dans une ArcGIS Experience Builder Developer Edition
 

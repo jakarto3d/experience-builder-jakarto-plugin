@@ -2,6 +2,24 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — MVP scaffold complet, corrections de finition
+
+- `manifest.json` : `translatedLocales` corrigé à `["fr"]` (une seule
+  locale traduite dans `translations/default.ts` pour l'instant — déclarer
+  `"en"` sans fichier `en.ts` associé aurait été trompeur).
+- `widgets/jakartowns-viewer/README.md` : statut mis à jour + checklist de
+  vérification à faire une fois le widget déployé dans une vraie
+  installation Experience Builder (compilation TS, cookie partitionné
+  cross-site, conflits de clic avec d'autres widgets, fluidité du `goTo`
+  pendant une navigation continue, responsive du formulaire de connexion).
+- **Bilan de cette itération** : le widget est complet en l'état de l'art
+  documenté (manifest, config, liaison carte, auth, embed, sync
+  bidirectionnelle), mais reste **non compilé et non testé** faute
+  d'accès à une Developer Edition ArcGIS Experience Builder. La suite
+  logique est : obtenir/installer une Developer Edition, copier
+  `widgets/jakartowns-viewer/` dans `client/your-extensions/widgets/`, et
+  lever un par un les points de la checklist du README du widget.
+
 ## 2026-07-10 — Synchronisation bidirectionnelle carte ↔ Jakartowns
 
 - `src/runtime/hooks/useSpatialSync.ts` : portage du composable Vue

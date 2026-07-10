@@ -9,7 +9,7 @@
   "license": "",
   "dependency": "jimu-arcgis",
   "properties": {},
-  "translatedLocales": ["fr", "en"],
+  "translatedLocales": ["fr"],
   "defaultSize": {
     "width": 640,
     "height": 480
