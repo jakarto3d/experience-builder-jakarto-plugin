@@ -21,6 +21,27 @@
   pointer-events: none !important;
 }
 
+/*
+ * Quand ce widget est placé À L'INTÉRIEUR d'un widget Map (comme un
+ * contrôle de zoom ou une barre de recherche, plutôt qu'à côté sur la
+ * page), Experience Builder force lui-même `.map-is-live-mode .is-widget
+ * { pointer-events: auto !important; }` sur le wrapper qu'il ajoute autour
+ * de CHAQUE widget enfant du Map — un ou plusieurs niveaux AU-DESSUS de
+ * notre propre div. Confirmé dans DevTools : le clic sélectionne
+ * `.widget-content` (le wrapper d'ExB), pas notre `.jakartowns-viewer-widget`.
+ * Comme le blocage se produit sur des ancêtres qu'on ne contrôle pas (pas
+ * de className à leur passer), on les neutralise directement via `:has()`,
+ * en ciblant uniquement la branche qui contient CE widget précis — les
+ * autres widgets enfants du Map (zoom, recherche…) gardent leur
+ * pointer-events normal.
+ */
+.layout-item.is-widget:has(.jakartowns-viewer-widget),
+.layout-item.is-widget:has(.jakartowns-viewer-widget) .animate-wrapper,
+.layout-item.is-widget:has(.jakartowns-viewer-widget) .widget-renderer,
+.layout-item.is-widget:has(.jakartowns-viewer-widget) .widget-content {
+  pointer-events: none !important;
+}
+
 .jakartowns-viewer-placeholder {
   position: absolute;
   inset: 0;
