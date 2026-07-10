@@ -38,6 +38,16 @@ Ce dossier n'est **pas** un projet buildable en autonomie : il doit être
 copié dans le web extension repo d'une installation Developer Edition
 existante.
 
+> **Vidéo utile pour l'installation** : [Set up ArcGIS Experience Builder Developer Edition](https://www.youtube.com/watch?v=YLBxBio96a8)
+> — les 20 premières minutes en particulier ont servi à installer
+> l'environnement local (fonctionne aussi sur Linux, pas seulement Windows).
+> Suivre les étapes de la vidéo dans l'ordre, sans en sauter.
+>
+> Pour l'étape OAuth de la vidéo : utiliser un compte ArcGIS Online existant
+> (ici, `https://jakarto.maps.arcgis.com/`) plutôt que d'en créer un
+> nouveau, et choisir le type **"OAuth 2.0 credentials - For user
+> authentication"** pour les identifiants de l'application.
+
 1. Télécharger/installer ArcGIS Experience Builder Developer Edition (voir la
    documentation Esri officielle : https://developers.arcgis.com/experience-builder/guide/getting-started-widget/).
 2. Copier ce dossier entier (`jakartowns-viewer/`) dans :
