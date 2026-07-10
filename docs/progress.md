@@ -2,6 +2,35 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Synchronisation bidirectionnelle carte ↔ Jakartowns
+
+- `src/runtime/hooks/useSpatialSync.ts` : portage du composable Vue
+  `useSpatialSync` en hook React (anti-rebond 300 ms pour éviter les boucles
+  carte → Jakartowns → carte → …).
+- `src/runtime/widget.tsx` complété :
+  - Formulaire de connexion par clé API Jakarto (par utilisateur, cf.
+    décision du 2026-07-10 plus bas) affiché tant que non authentifié.
+  - Une fois authentifié : initialise le viewer Jakartowns
+    (`services/jakarto.initializeViewer`) dans un conteneur dédié, avec pour
+    position de départ le centre de la carte liée (repli sur
+    `config.fallbackLatitude/Longitude` si la carte n'a pas encore de
+    centre).
+  - Clic sur la `MapView` liée (`jimuMapView.view.on('click', …)`) →
+    `viewerHandle.setPosition(...)`.
+  - Événement `position` du viewer Jakartowns → `view.goTo(...)` sur la
+    carte liée.
+  - Utilisation d'un `ref` (`jimuMapViewRef`) synchronisé sur l'état
+    `jimuMapView` pour que les callbacks du viewer (créés une seule fois, à
+    l'authentification) lisent toujours la vue active courante sans avoir à
+    redémarrer le viewer à chaque changement de vue.
+- Non vérifié (pas d'environnement ExB réel) : le comportement exact de
+  `view.on('click')` combiné à d'autres widgets qui interceptent aussi les
+  clics sur la même carte (ex. widget de sélection), et la performance du
+  `goTo` avec `duration: 600` quand les événements `position` de Jakartowns
+  arrivent à haute fréquence pendant un déplacement continu dans le
+  panorama — un anti-rebond plus agressif ou un throttle pourrait être
+  nécessaire selon le retour réel.
+
 ## 2026-07-10 — Démarrage : recherche + décisions d'architecture
 
 - Repo de départ : un prototype Vue autonome (`esri_js_sdk_demo`, écrit par un

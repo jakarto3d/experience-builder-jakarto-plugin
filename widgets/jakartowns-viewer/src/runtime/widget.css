@@ -17,3 +17,88 @@
   color: var(--ref-palette-neutral-800, #444);
   font-size: 0.9rem;
 }
+
+.jakartowns-viewer-login {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.jakartowns-viewer-login-title {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.jakartowns-viewer-login-error {
+  color: #d13438;
+  font-size: 0.8rem;
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.jakartowns-viewer-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 280px;
+}
+
+.jakartowns-viewer-login-label {
+  font-size: 0.8rem;
+}
+
+.jakartowns-viewer-login-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--ref-palette-neutral-500, #ccc);
+  border-radius: 4px;
+  font-size: 0.9rem;
+}
+
+.jakartowns-viewer-login-link {
+  font-size: 0.75rem;
+  text-align: right;
+}
+
+.jakartowns-viewer-login-btn {
+  margin-top: 0.4rem;
+  padding: 0.55rem;
+  border: none;
+  border-radius: 4px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.jakartowns-viewer-login-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.jakartowns-viewer-panorama-wrapper {
+  flex: 1;
+  position: relative;
+  min-height: 0;
+}
+
+.jakartowns-viewer-panorama {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.jakartowns-viewer-logout-btn {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+  padding: 0.25rem 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.18);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.75rem;
+  cursor: pointer;
+}
