@@ -30,15 +30,24 @@
  * notre propre div. Confirmé dans DevTools : le clic sélectionne
  * `.widget-content` (le wrapper d'ExB), pas notre `.jakartowns-viewer-widget`.
  * Comme le blocage se produit sur des ancêtres qu'on ne contrôle pas (pas
- * de className à leur passer), on les neutralise directement via `:has()`,
- * en ciblant uniquement la branche qui contient CE widget précis — les
- * autres widgets enfants du Map (zoom, recherche…) gardent leur
- * pointer-events normal.
+ * de className à leur passer), on les neutralise directement via `:has()`.
+ *
+ * ATTENTION : `:has()` cherche un descendant à n'importe quelle profondeur.
+ * Le widget Map lui-même est *aussi* enveloppé dans un `.layout-item.is-widget`
+ * au niveau de la page (même classes génériques, sans le préfixe `map-`), et
+ * notre widget est un descendant (profondément imbriqué) de CE wrapper-là
+ * aussi. Une première version de cette règle sans le préfixe `.map-fix-layout`
+ * neutralisait donc AUSSI le pointer-events du widget Map entier, bloquant
+ * toute la carte (bug constaté par l'utilisateur : plus aucune interaction
+ * nulle part sur la carte, même loin du panneau). `.map-fix-layout` est la
+ * couche interne du Map (n'existe qu'À L'INTÉRIEUR de la carte, jamais au
+ * niveau page) : elle restreint la règle aux seuls widgets réellement
+ * imbriqués dans le Map, sans toucher au Map lui-même.
  */
-.layout-item.is-widget:has(.jakartowns-viewer-widget),
-.layout-item.is-widget:has(.jakartowns-viewer-widget) .animate-wrapper,
-.layout-item.is-widget:has(.jakartowns-viewer-widget) .widget-renderer,
-.layout-item.is-widget:has(.jakartowns-viewer-widget) .widget-content {
+.map-fix-layout .layout-item.is-widget:has(.jakartowns-viewer-widget),
+.map-fix-layout .layout-item.is-widget:has(.jakartowns-viewer-widget) .animate-wrapper,
+.map-fix-layout .layout-item.is-widget:has(.jakartowns-viewer-widget) .widget-renderer,
+.map-fix-layout .layout-item.is-widget:has(.jakartowns-viewer-widget) .widget-content {
   pointer-events: none !important;
 }
 
