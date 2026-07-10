@@ -49,6 +49,9 @@ existante.
 3. Depuis `<installation-exb>/client`, lancer `npm start` (redémarrer le
    serveur de dev si un `manifest.json`/`config.json` a changé — seuls les
    fichiers `.ts`/`.tsx`/`.css` sont repris à chaud).
+   Si `npm start` échoue avec une erreur du genre `Cannot find module
+   'tinyglobby'`, forcer la version de Node avec
+   [fnm](https://github.com/Schniz/fnm) : `fnm exec --using v20.20.2 npm run start`.
 4. Ouvrir le builder ExB local, ajouter le widget **Jakartowns Viewer** à une
    page contenant déjà un widget **Map**.
 5. Dans les réglages du widget, sélectionner le widget Map à lier
