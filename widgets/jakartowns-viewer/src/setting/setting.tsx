@@ -1,4 +1,4 @@
-import { React, type ImmutableArray } from 'jimu-core'
+import { React } from 'jimu-core'
 import { type AllWidgetSettingProps } from 'jimu-for-builder'
 import { MapWidgetSelector, SettingSection, SettingRow } from 'jimu-ui/advanced/setting-components'
 import { Switch } from 'jimu-ui'
@@ -6,7 +6,9 @@ import { type IMConfig } from '../config'
 import defaultMessages from './translations/default'
 
 const Setting = (props: AllWidgetSettingProps<IMConfig>) => {
-  const onMapWidgetSelected = (useMapWidgetIds: ImmutableArray<string>) => {
+  // onSelect renvoie un tableau simple (string[]), pas un ImmutableArray :
+  // c'est la même forme que WidgetJson.useMapWidgetIds côté framework.
+  const onMapWidgetSelected = (useMapWidgetIds: string[]) => {
     props.onSettingChange({
       id: props.id,
       useMapWidgetIds: useMapWidgetIds

@@ -2,6 +2,51 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Premiers tests en environnement réel : deux bugs corrigés
+
+L'utilisateur a maintenant accès à une vraie Developer Edition ArcGIS
+Experience Builder et y a copié `widgets/jakartowns-viewer/`. Premiers
+résultats : **le widget compile et s'affiche** dans le canvas (le placeholder
+français apparaît correctement). Par contre le panneau de réglages du widget
+n'affichait que "Size & Position" (les contrôles génériques), sans les onglets
+Content/Style/Action attendus — impossible de lier un widget Map.
+
+Diagnostic fait en inspectant directement les sources de la Developer Edition
+(types réels de `jimu-core`/`jimu-arcgis`/`jimu-ui`, et le fichier généré
+`client/dist/widgets/widgets-info.json`) :
+
+1. **Cause racine confirmée** : notre widget n'a pas de `config.json` à sa
+   racine (contrairement au widget d'exemple officiel `simple`, comparé
+   directement). Sans ce fichier, le build marque
+   `manifest.properties.hasConfig = false` (visible dans
+   `widgets-info.json`), et `props.config` reste vraisemblablement
+   indéfini côté panneau de réglages — `setting.tsx` plantait donc en lisant
+   `props.config.headerEnabled`, ce qui faisait tomber tout le panneau
+   (Content/Style/Action) sur l'affichage de secours générique.
+   → **Fix** : ajout de `widgets/jakartowns-viewer/config.json` avec les
+   valeurs par défaut (`headerEnabled: true, minimapEnabled: false,
+   fallbackLatitude/Longitude`). L'export `defaultConfig` désormais inutile
+   a été retiré de `src/config.ts` pour éviter d'avoir deux sources de
+   vérité.
+2. **Bug fonctionnel confirmé séparément** (aurait cassé la liaison à la
+   carte une fois le panneau de réglages fonctionnel) : `widget.tsx` passait
+   `useMapWidgetIds` (pluriel, un tableau) à `<JimuMapViewComponent>`, qui
+   attend en réalité `useMapWidgetId` (singulier, un seul id) — confirmé
+   par l'exemple donné dans le commentaire JSDoc de la classe `JimuMapView`
+   elle-même (`client/jimu-arcgis/lib/views/jimu-map-view.d.ts`).
+   → **Fix** : `useMapWidgetId={useMapWidgetIds[0]}`.
+3. Corrigé au passage dans `setting.tsx` : le callback `onSelect` de
+   `MapWidgetSelector` reçoit un `string[]` simple, pas un
+   `ImmutableArray<string>` (sans impact fonctionnel ici — le build de dev
+   utilise `ts-loader` en mode `transpileOnly`, donc les erreurs de type
+   n'empêchent pas la compilation — mais corrigé pour rester correct).
+
+**À faire par l'utilisateur** : redémarrer le serveur de dev (`npm start`
+depuis `client/`) pour que `config.json` soit repris en compte (le fichier
+`widgets-info.json` est régénéré au démarrage, pas à chaud), puis rouvrir le
+widget dans le builder et vérifier que les onglets Content/Style/Action
+apparaissent avec le sélecteur de carte.
+
 ## 2026-07-10 — Ouverture via l'API URL (fallback indépendant de l'auth JS API)
 
 - Demande utilisateur : avoir un moyen d'ouvrir Jakartowns via l'**API URL**

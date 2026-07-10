@@ -134,9 +134,9 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   return (
     <div className="jakartowns-viewer-widget jimu-widget">
-      {useMapWidgetIds && (
+      {hasLinkedMap && (
         <JimuMapViewComponent
-          useMapWidgetIds={useMapWidgetIds}
+          useMapWidgetId={useMapWidgetIds[0]}
           onActiveViewChange={onActiveViewChange}
         />
       )}
