@@ -493,106 +493,111 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             </div>
           </div>
 
-          {!isPanelFolded && (
-            <div className="jakartowns-viewer-panel-body">
-              <div className="jakartowns-viewer-panel-toolbar">
-                <button
-                  type="button"
-                  className="jakartowns-viewer-toolbar-btn"
-                  aria-pressed={isPickingEnabled}
-                  title={defaultMessages.pickingModeHint}
-                  onClick={() => setIsPickingEnabled((enabled) => !enabled)}
-                >
-                  <IconTarget />
-                  {defaultMessages.pickingModeLabel}
-                </button>
-                <button
-                  type="button"
-                  className="jakartowns-viewer-toolbar-btn"
-                  title={defaultMessages.openInJakartownsLink}
-                  onClick={handleOpenInJakartowns}
-                  disabled={!currentImageId}
-                >
-                  <IconExternalLink />
-                  {defaultMessages.openInJakartownsLink}
-                </button>
-              </div>
-
-              {!isAuthenticated && (
-                <div className="jakartowns-viewer-login">
-                  <h3 className="jakartowns-viewer-login-title">{defaultMessages.loginTitle}</h3>
-                  {authError && <p className="jakartowns-viewer-login-error">{authError}</p>}
-                  <form className="jakartowns-viewer-login-form" onSubmit={handleLogin}>
-                    <label htmlFor="jakarto-apikey" className="jakartowns-viewer-login-label">
-                      {defaultMessages.loginLabel}
-                    </label>
-                    <input
-                      id="jakarto-apikey"
-                      type="password"
-                      className="jakartowns-viewer-login-input"
-                      value={apiKeyInput}
-                      onChange={(e) => setApiKeyInput(e.target.value)}
-                      autoComplete="current-password"
-                      required
-                    />
-                    <a
-                      href="https://solutions.jakarto.com/profile"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="jakartowns-viewer-login-link"
-                    >
-                      {defaultMessages.loginLink}
-                    </a>
-                    <button type="submit" className="jakartowns-viewer-login-btn" disabled={authLoading}>
-                      {authLoading ? defaultMessages.loginButtonLoading : defaultMessages.loginButton}
-                    </button>
-                  </form>
-                </div>
-              )}
-
-              {isAuthenticated && (
-                <div className="jakartowns-viewer-panorama-area" style={{ height: panelSize.height }}>
-                  <div ref={viewerContainerRef} className="jakartowns-viewer-panorama" />
-
-                  {timelineEntries.length > 0 && (
-                    <div className="jakartowns-viewer-timeline">
-                      <button
-                        type="button"
-                        className="jakartowns-viewer-timeline-arrow"
-                        aria-label={defaultMessages.timelineScrollPrevious}
-                        onClick={() => scrollTimeline(-1)}
-                      >
-                        ‹
-                      </button>
-                      <div className="jakartowns-viewer-timeline-list" ref={timelineListRef}>
-                        {timelineEntries.map((image) => (
-                          <button
-                            key={image.imageId}
-                            type="button"
-                            className={
-                              'jakartowns-viewer-multipass-chip' +
-                              (image.imageId === currentImageId ? ' is-selected' : '')
-                            }
-                            onClick={() => handleSelectImage(image.imageId)}
-                          >
-                            {formatJakartoDate(image.date) ?? defaultMessages.multipassUnknownDate}
-                          </button>
-                        ))}
-                      </div>
-                      <button
-                        type="button"
-                        className="jakartowns-viewer-timeline-arrow"
-                        aria-label={defaultMessages.timelineScrollNext}
-                        onClick={() => scrollTimeline(1)}
-                      >
-                        ›
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+          {/*
+            Masqué en CSS (pas démonté du JSX) quand replié : le conteneur
+            du panorama ci-dessous héberge le canvas WebGL de Jakartowns,
+            monté une seule fois par initializeViewer. Le démonter puis le
+            remonter (via un rendu conditionnel) casse ce canvas —
+            Jakartowns ne le recrée pas tout seul dans une nouvelle div vide.
+          */}
+          <div className={'jakartowns-viewer-panel-body' + (isPanelFolded ? ' jakartowns-viewer-panel-body--hidden' : '')}>
+            <div className="jakartowns-viewer-panel-toolbar">
+              <button
+                type="button"
+                className="jakartowns-viewer-toolbar-btn"
+                aria-pressed={isPickingEnabled}
+                title={defaultMessages.pickingModeHint}
+                onClick={() => setIsPickingEnabled((enabled) => !enabled)}
+              >
+                <IconTarget />
+                {defaultMessages.pickingModeLabel}
+              </button>
+              <button
+                type="button"
+                className="jakartowns-viewer-toolbar-btn"
+                title={defaultMessages.openInJakartownsLink}
+                onClick={handleOpenInJakartowns}
+                disabled={!currentImageId}
+              >
+                <IconExternalLink />
+                {defaultMessages.openInJakartownsLink}
+              </button>
             </div>
-          )}
+
+            {!isAuthenticated && (
+              <div className="jakartowns-viewer-login">
+                <h3 className="jakartowns-viewer-login-title">{defaultMessages.loginTitle}</h3>
+                {authError && <p className="jakartowns-viewer-login-error">{authError}</p>}
+                <form className="jakartowns-viewer-login-form" onSubmit={handleLogin}>
+                  <label htmlFor="jakarto-apikey" className="jakartowns-viewer-login-label">
+                    {defaultMessages.loginLabel}
+                  </label>
+                  <input
+                    id="jakarto-apikey"
+                    type="password"
+                    className="jakartowns-viewer-login-input"
+                    value={apiKeyInput}
+                    onChange={(e) => setApiKeyInput(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                  <a
+                    href="https://solutions.jakarto.com/profile"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="jakartowns-viewer-login-link"
+                  >
+                    {defaultMessages.loginLink}
+                  </a>
+                  <button type="submit" className="jakartowns-viewer-login-btn" disabled={authLoading}>
+                    {authLoading ? defaultMessages.loginButtonLoading : defaultMessages.loginButton}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {isAuthenticated && (
+              <div className="jakartowns-viewer-panorama-area" style={{ height: panelSize.height }}>
+                <div ref={viewerContainerRef} className="jakartowns-viewer-panorama" />
+
+                {timelineEntries.length > 0 && (
+                  <div className="jakartowns-viewer-timeline">
+                    <button
+                      type="button"
+                      className="jakartowns-viewer-timeline-arrow"
+                      aria-label={defaultMessages.timelineScrollPrevious}
+                      onClick={() => scrollTimeline(-1)}
+                    >
+                      ‹
+                    </button>
+                    <div className="jakartowns-viewer-timeline-list" ref={timelineListRef}>
+                      {timelineEntries.map((image) => (
+                        <button
+                          key={image.imageId}
+                          type="button"
+                          className={
+                            'jakartowns-viewer-multipass-chip' +
+                            (image.imageId === currentImageId ? ' is-selected' : '')
+                          }
+                          onClick={() => handleSelectImage(image.imageId)}
+                        >
+                          {formatJakartoDate(image.date) ?? defaultMessages.multipassUnknownDate}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      className="jakartowns-viewer-timeline-arrow"
+                      aria-label={defaultMessages.timelineScrollNext}
+                      onClick={() => scrollTimeline(1)}
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {!isPanelFolded && (
             <>

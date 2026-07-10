@@ -125,6 +125,11 @@
   min-height: 0;
 }
 
+/* Masque plutôt que démonter (voir commentaire dans widget.tsx) : préserve le canvas Jakartowns entre deux repliages. */
+.jakartowns-viewer-panel-body--hidden {
+  display: none;
+}
+
 .jakartowns-viewer-panel-toolbar {
   display: flex;
   gap: 6px;

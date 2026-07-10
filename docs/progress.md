@@ -2,6 +2,32 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Vraie cause du blocage des clics : ce widget est imbriqué DANS le widget Map
+
+Le premier fix `pointer-events: none` sur notre propre div ne suffisait pas.
+Diagnostic DevTools demandé à l'utilisateur (clic sur la zone vide,
+inspection de l'élément sélectionné) : ce widget a été placé **à
+l'intérieur** du widget Map (comme un contrôle de zoom ou une barre de
+recherche), pas à côté sur la page. Dans ce contexte, Experience Builder
+force lui-même une règle globale :
+```css
+.map-is-live-mode .is-widget { pointer-events: auto !important; }
+```
+sur le wrapper qu'il ajoute autour de CHAQUE widget enfant du Map
+(`.layout-item.is-widget`, puis `.widget-renderer`, `.widget-content` en
+descendant) — un ou plusieurs niveaux AU-DESSUS de notre propre div. Notre
+règle ne pouvait rien y faire puisqu'elle ne s'appliquait qu'à notre propre
+élément, alors que le blocage se produisait sur des ancêtres qu'on ne
+contrôle pas (pas de `className` à leur passer).
+
+**Fix** : neutralisation via le sélecteur relationnel `:has()` (Chrome/Edge
+105+, largement dans les clous pour cette Developer Edition), ciblant
+`.layout-item.is-widget`, `.widget-renderer`, `.widget-content` mais
+uniquement quand ils contiennent `.jakartowns-viewer-widget` — les autres
+widgets enfants du Map (zoom, recherche, home) gardent leur comportement
+normal, seule la branche de CE widget devient transparente aux clics en
+dehors de son panneau flottant.
+
 ## 2026-07-10 — Pointer-events, redimensionnement, fil des dates, orientation au changement d'image
 
 Retours utilisateur après test du panneau flottant :
