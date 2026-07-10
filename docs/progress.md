@@ -2,6 +2,42 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Couche "jakman" (positions des panoramas disponibles) pendant le mode pointage
+
+Demande utilisateur, par analogie avec l'asset viewer Jakarto
+(`jakassets-viewer`, déjà consulté pour le debug) : afficher une couche
+indiquant où des panoramas Jakartowns existent, pour guider le clic sur la
+carte, comme le fait leur bouton "jakman".
+
+Recherche dans leur code (`src/lib/jakman.js`,
+`src/composables/useJakmanToggleLayers.js`,
+`src/configuration/jakman/*.json`) : leur couche "jakman" est un flux de
+**tuiles vectorielles** (`https://maps.jakarto.com/backend/tiles/data/spheres/{z}/{x}/{y}.pbf`,
+format Mapbox/MapLibre), affichée dans leur propre carte MapLibre — pas une
+techno ArcGIS. Bonne nouvelle : le SDK ArcGIS Maps for JavaScript sait
+consommer ce même format via `VectorTileLayer` initialisé avec un style
+Mapbox GL Style Spec (`sources`/`layers`), donc réutilisable directement
+sans dépendre de leur stack.
+
+**Implémenté** dans `src/runtime/lib/jakmanLayer.ts` + `widget.tsx` :
+- `VectorTileLayer` créée une fois par vue de carte (chargée dynamiquement
+  via `loadArcGISJSAPIModules`, la manière documentée de charger des
+  modules ArcGIS JS API dans un widget ExB sans les bundler statiquement),
+  visible uniquement pendant le mode pointage (`isPickingEnabled`).
+- Même style que jakman (cercles bleu marine `#191970`, rayon croissant
+  avec le zoom).
+
+**Non vérifié** (à tester visuellement) :
+- Le endpoint de tuiles exige peut-être le cookie de session Jakarto ; le
+  SDK ArcGIS n'envoie pas les cookies cross-origin par défaut. Un
+  intercepteur de requêtes (`esriConfig.request.interceptors`) force
+  `credentials: 'include'` spécifiquement pour cet hôte, mais ce
+  contournement n'a pas pu être testé en conditions réelles.
+- Compatibilité exacte du style Mapbox GL Style Spec consommé par
+  `VectorTileLayer` (la nôtre est minimale : une seule source vectorielle,
+  une couche `circle`) — à confirmer que ça rend bien une fois la couche
+  visible.
+
 ## 2026-07-10 — Vraie cause du blocage des clics : ce widget est imbriqué DANS le widget Map
 
 Le premier fix `pointer-events: none` sur notre propre div ne suffisait pas.

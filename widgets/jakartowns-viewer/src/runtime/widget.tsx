@@ -1,5 +1,5 @@
 import { React, type AllWidgetProps } from 'jimu-core'
-import { JimuMapViewComponent, type JimuMapView } from 'jimu-arcgis'
+import { JimuMapViewComponent, loadArcGISJSAPIModules, type JimuMapView } from 'jimu-arcgis'
 import { type IMConfig } from '../config'
 import {
   getStoredApiKey,
@@ -14,6 +14,7 @@ import {
   type JakartoMultipassImage,
   type JakartoWidgetSettings
 } from './services/jakarto'
+import { JAKMAN_SPHERES_STYLE, ensureJakmanRequestCredentials } from './lib/jakmanLayer'
 import { useSpatialSync } from './hooks/useSpatialSync'
 import defaultMessages from './translations/default'
 import './widget.css'
@@ -160,6 +161,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const [isPickingEnabled, setIsPickingEnabled] = React.useState(false)
   const isPickingEnabledRef = React.useRef(false)
+  const jakmanLayerRef = React.useRef<any>(null)
 
   const spatialSync = useSpatialSync()
 
@@ -173,6 +175,37 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   React.useEffect(() => {
     isPickingEnabledRef.current = isPickingEnabled
+  }, [isPickingEnabled])
+
+  // Couche "jakman" (positions des panoramas Jakartowns disponibles) : créée
+  // une fois par vue de carte, visible seulement pendant le mode pointage —
+  // un repère visuel pour savoir où cliquer avant de le faire.
+  React.useEffect(() => {
+    const view = jimuMapView?.view
+    if (!view) return
+
+    let cancelled = false
+    loadArcGISJSAPIModules(['esri/layers/VectorTileLayer', 'esri/config']).then(([VectorTileLayer, esriConfig]) => {
+      if (cancelled) return
+      ensureJakmanRequestCredentials(esriConfig)
+      const layer = new VectorTileLayer({ style: JAKMAN_SPHERES_STYLE, visible: isPickingEnabledRef.current })
+      jakmanLayerRef.current = layer
+      view.map.add(layer)
+    })
+
+    return () => {
+      cancelled = true
+      if (jakmanLayerRef.current) {
+        view.map.remove(jakmanLayerRef.current)
+        jakmanLayerRef.current = null
+      }
+    }
+  }, [jimuMapView])
+
+  React.useEffect(() => {
+    if (jakmanLayerRef.current) {
+      jakmanLayerRef.current.visible = isPickingEnabled
+    }
   }, [isPickingEnabled])
 
   // Ferme le popover de réglages au clic en dehors.
