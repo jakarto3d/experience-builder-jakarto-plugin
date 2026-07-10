@@ -2,6 +2,38 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Couche jakman retirée (limitation cross-origin du cookie Jakarto), fix du remplissage par défaut, barre de titre repensée
+
+- **Couche jakman retirée.** Testée en conditions réelles : la requête vers
+  `maps.jakarto.com/backend/tiles/...` est redirigée vers une page de
+  connexion (`solutions.jakarto.com/login?redirectTo=...`), bloquée par
+  CORS ; le repli automatique d'ArcGIS vers son propre proxy de partage
+  échoue aussi en 403. Hypothèse retenue (cohérente avec le blocage CORS
+  déjà rencontré sur `/auth` plus tôt) : le cookie de session Jakarto est
+  probablement `SameSite=Lax/Strict`, donc jamais envoyé sur une requête
+  cross-site en arrière-plan depuis notre widget, quelle que soit la
+  configuration ArcGIS côté client (intercepteur, `trustedServers`…). Ce
+  n'est pas quelque chose de corrigeable depuis le widget — décision
+  utilisateur : retirer la fonctionnalité plutôt que la garder non
+  fonctionnelle. `src/runtime/lib/jakmanLayer.ts` supprimé.
+- **Bug du remplissage par défaut corrigé.** Le premier essai utilisait un
+  `useLayoutEffect(..., [])` : comme le panneau n'existe dans le DOM
+  qu'une fois `jimuMapView` disponible (asynchrone), `panelRef.current`
+  était `null` au moment de cette unique exécution, donc l'effet
+  abandonnait aussitôt et ne se redéclenchait jamais — corrigé en le
+  faisant dépendre de `jimuMapView`. Remplacé aussi la mesure dynamique de
+  la hauteur de la barre de titre (`getBoundingClientRect`, qui pouvait
+  renvoyer 0 si l'effet se déclenchait avant la stabilisation du layout,
+  faisant déborder le panneau et masquer le fil des dates) par une
+  constante fixe (`TITLEBAR_HEIGHT = 42px`, déterministe vu que le CSS de
+  la barre de titre est entièrement sous notre contrôle).
+- **Barre de titre repensée** : trois zones à `flex:1` égal de chaque côté
+  (début/fin) pour centrer précisément la zone du milieu, quelle que soit
+  la largeur du titre ou des icônes. Le bouton "Cliquer sur la carte"
+  passe au centre avec son texte, un style plus visible (bordure, fond
+  semi-transparent, mise en évidence à l'activation). "Ouvrir dans
+  Jakartowns" reste juste à côté, en icône seule.
+
 ## 2026-07-10 — Couche "jakman" (positions des panoramas disponibles) pendant le mode pointage
 
 Demande utilisateur, par analogie avec l'asset viewer Jakarto

@@ -100,15 +100,61 @@
 }
 
 .jakartowns-viewer-panel-title {
-  flex: 1;
   font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
-.jakartowns-viewer-panel-titlebar-actions {
+/*
+ * Trois zones à flex:1 égal de chaque côté (start/end) : ça centre la zone
+ * du milieu (le bouton "Cliquer sur la carte") avec précision, quelle que
+ * soit la largeur du titre à gauche ou des icônes à droite.
+ */
+.jakartowns-viewer-panel-titlebar-start,
+.jakartowns-viewer-panel-titlebar-end {
+  flex: 1;
+  min-width: 0;
   display: flex;
+  align-items: center;
   gap: 2px;
+}
+
+.jakartowns-viewer-panel-titlebar-end {
+  justify-content: flex-end;
+}
+
+.jakartowns-viewer-panel-titlebar-center {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.jakartowns-viewer-picking-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #f8fafc;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.jakartowns-viewer-picking-btn:hover {
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.jakartowns-viewer-picking-btn[aria-pressed="true"] {
+  background: #2f6fed;
+  border-color: #2f6fed;
+  color: #fff;
 }
 
 .jakartowns-viewer-icon-btn {

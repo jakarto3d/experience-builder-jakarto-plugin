@@ -1,5 +1,5 @@
 import { React, type AllWidgetProps } from 'jimu-core'
-import { JimuMapViewComponent, loadArcGISJSAPIModules, type JimuMapView } from 'jimu-arcgis'
+import { JimuMapViewComponent, type JimuMapView } from 'jimu-arcgis'
 import { type IMConfig } from '../config'
 import {
   getStoredApiKey,
@@ -14,7 +14,6 @@ import {
   type JakartoMultipassImage,
   type JakartoWidgetSettings
 } from './services/jakarto'
-import { JAKMAN_SPHERES_STYLE, ensureJakmanRequestCredentials } from './lib/jakmanLayer'
 import { useSpatialSync } from './hooks/useSpatialSync'
 import defaultMessages from './translations/default'
 import './widget.css'
@@ -24,6 +23,12 @@ const DEFAULT_PANORAMA_HEIGHT = 320
 const MIN_PANEL_WIDTH = 260
 const MIN_PANORAMA_HEIGHT = 180
 const TIMELINE_SCROLL_STEP = 160
+const PANEL_MARGIN = 12
+// Hauteur réelle de .jakartowns-viewer-panel-titlebar (icônes 26px + padding
+// vertical 8+8) : figée ici plutôt que mesurée via getBoundingClientRect,
+// qui peut renvoyer 0 si l'effet se déclenche avant que le layout ne se
+// stabilise — ça avait fait déborder le panneau et masqué le fil des dates.
+const TITLEBAR_HEIGHT = 42
 
 interface DragState {
   pointerId: number
@@ -138,11 +143,16 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const [panelSize, setPanelSize] = React.useState<PanelSize>({ width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANORAMA_HEIGHT })
   const [isPanelFolded, setIsPanelFolded] = React.useState(false)
 
-  // Par défaut, le panneau occupe tout l'espace disponible du widget (moins
-  // la marge de 12px et la hauteur de la barre de titre) plutôt qu'une
-  // petite taille fixe — jusqu'à ce que l'utilisateur le déplace ou le
-  // redimensionne lui-même, après quoi on respecte son choix même si le
-  // widget change de taille.
+  const [jimuMapView, setJimuMapView] = React.useState<JimuMapView>(null)
+  const jimuMapViewRef = React.useRef<JimuMapView>(null)
+
+  // Par défaut, le panneau occupe tout l'espace disponible du widget plutôt
+  // qu'une petite taille fixe — jusqu'à ce que l'utilisateur le déplace ou
+  // le redimensionne lui-même (cf. hasCustomSizeRef), après quoi son choix
+  // est respecté même si le widget change de taille. Dépend de `jimuMapView`
+  // (pas `[]`) : le panneau n'existe dans le DOM qu'une fois la carte liée
+  // active, donc un effet à dépendances vides s'exécuterait avant que
+  // `panelRef` soit renseigné et ne se redéclencherait jamais.
   React.useLayoutEffect(() => {
     const root = widgetRootRef.current
     const panel = panelRef.current
@@ -150,13 +160,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
     const applyDefaultFullSize = () => {
       if (hasCustomSizeRef.current) return
-      const margin = 12
       const rootRect = root.getBoundingClientRect()
-      const titlebarHeight = panel.querySelector('.jakartowns-viewer-panel-titlebar')?.getBoundingClientRect().height ?? 0
-      setPanelPosition({ left: margin, top: margin })
+      setPanelPosition({ left: PANEL_MARGIN, top: PANEL_MARGIN })
       setPanelSize({
-        width: Math.max(MIN_PANEL_WIDTH, rootRect.width - margin * 2),
-        height: Math.max(MIN_PANORAMA_HEIGHT, rootRect.height - margin * 2 - titlebarHeight)
+        width: Math.max(MIN_PANEL_WIDTH, rootRect.width - PANEL_MARGIN * 2),
+        height: Math.max(MIN_PANORAMA_HEIGHT, rootRect.height - PANEL_MARGIN * 2 - TITLEBAR_HEIGHT)
       })
     }
 
@@ -164,10 +172,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     const observer = new ResizeObserver(applyDefaultFullSize)
     observer.observe(root)
     return () => observer.disconnect()
-  }, [])
-
-  const [jimuMapView, setJimuMapView] = React.useState<JimuMapView>(null)
-  const jimuMapViewRef = React.useRef<JimuMapView>(null)
+  }, [jimuMapView])
 
   const [isAuthenticated, setIsAuthenticated] = React.useState(false)
   const [apiKeyInput, setApiKeyInput] = React.useState('')
@@ -192,7 +197,6 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const [isPickingEnabled, setIsPickingEnabled] = React.useState(false)
   const isPickingEnabledRef = React.useRef(false)
-  const jakmanLayerRef = React.useRef<any>(null)
 
   const spatialSync = useSpatialSync()
 
@@ -206,37 +210,6 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   React.useEffect(() => {
     isPickingEnabledRef.current = isPickingEnabled
-  }, [isPickingEnabled])
-
-  // Couche "jakman" (positions des panoramas Jakartowns disponibles) : créée
-  // une fois par vue de carte, visible seulement pendant le mode pointage —
-  // un repère visuel pour savoir où cliquer avant de le faire.
-  React.useEffect(() => {
-    const view = jimuMapView?.view
-    if (!view) return
-
-    let cancelled = false
-    loadArcGISJSAPIModules(['esri/layers/VectorTileLayer', 'esri/config']).then(([VectorTileLayer, esriConfig]) => {
-      if (cancelled) return
-      ensureJakmanRequestCredentials(esriConfig)
-      const layer = new VectorTileLayer({ style: JAKMAN_SPHERES_STYLE, visible: isPickingEnabledRef.current })
-      jakmanLayerRef.current = layer
-      view.map.add(layer)
-    })
-
-    return () => {
-      cancelled = true
-      if (jakmanLayerRef.current) {
-        view.map.remove(jakmanLayerRef.current)
-        jakmanLayerRef.current = null
-      }
-    }
-  }, [jimuMapView])
-
-  React.useEffect(() => {
-    if (jakmanLayerRef.current) {
-      jakmanLayerRef.current.visible = isPickingEnabled
-    }
   }, [isPickingEnabled])
 
   // Ferme le popover de réglages au clic en dehors.
@@ -561,8 +534,33 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             onPointerMove={handleTitleBarPointerMove}
             onPointerUp={handleTitleBarPointerUp}
           >
-            <span className="jakartowns-viewer-panel-title">Jakartowns</span>
-            <div className="jakartowns-viewer-panel-titlebar-actions">
+            <div className="jakartowns-viewer-panel-titlebar-start">
+              <span className="jakartowns-viewer-panel-title">Jakartowns</span>
+            </div>
+
+            <div className="jakartowns-viewer-panel-titlebar-center">
+              <button
+                type="button"
+                className="jakartowns-viewer-picking-btn"
+                aria-pressed={isPickingEnabled}
+                title={defaultMessages.pickingModeHint}
+                onClick={() => setIsPickingEnabled((enabled) => !enabled)}
+              >
+                <IconTarget />
+                <span>{defaultMessages.pickingModeLabel}</span>
+              </button>
+              <button
+                type="button"
+                className="jakartowns-viewer-icon-btn"
+                title={defaultMessages.openInJakartownsLink}
+                onClick={handleOpenInJakartowns}
+                disabled={!currentImageId}
+              >
+                <IconExternalLink />
+              </button>
+            </div>
+
+            <div className="jakartowns-viewer-panel-titlebar-end">
               <div className="jakartowns-viewer-settings-anchor">
                 <button
                   type="button"
@@ -586,24 +584,6 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                   </div>
                 )}
               </div>
-              <button
-                type="button"
-                className="jakartowns-viewer-icon-btn"
-                aria-pressed={isPickingEnabled}
-                title={defaultMessages.pickingModeHint}
-                onClick={() => setIsPickingEnabled((enabled) => !enabled)}
-              >
-                <IconTarget />
-              </button>
-              <button
-                type="button"
-                className="jakartowns-viewer-icon-btn"
-                title={defaultMessages.openInJakartownsLink}
-                onClick={handleOpenInJakartowns}
-                disabled={!currentImageId}
-              >
-                <IconExternalLink />
-              </button>
               {isAuthenticated && (
                 <button
                   type="button"
