@@ -131,9 +131,40 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const panelRef = React.useRef<HTMLDivElement>(null)
   const dragStateRef = React.useRef<DragState | null>(null)
   const resizeStateRef = React.useRef<ResizeState | null>(null)
+  // Tant que l'utilisateur n'a pas lui-même déplacé/redimensionné le
+  // panneau, celui-ci occupe tout l'espace disponible du widget par défaut.
+  const hasCustomSizeRef = React.useRef(false)
   const [panelPosition, setPanelPosition] = React.useState<PanelPosition | null>(null)
   const [panelSize, setPanelSize] = React.useState<PanelSize>({ width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANORAMA_HEIGHT })
   const [isPanelFolded, setIsPanelFolded] = React.useState(false)
+
+  // Par défaut, le panneau occupe tout l'espace disponible du widget (moins
+  // la marge de 12px et la hauteur de la barre de titre) plutôt qu'une
+  // petite taille fixe — jusqu'à ce que l'utilisateur le déplace ou le
+  // redimensionne lui-même, après quoi on respecte son choix même si le
+  // widget change de taille.
+  React.useLayoutEffect(() => {
+    const root = widgetRootRef.current
+    const panel = panelRef.current
+    if (!root || !panel) return
+
+    const applyDefaultFullSize = () => {
+      if (hasCustomSizeRef.current) return
+      const margin = 12
+      const rootRect = root.getBoundingClientRect()
+      const titlebarHeight = panel.querySelector('.jakartowns-viewer-panel-titlebar')?.getBoundingClientRect().height ?? 0
+      setPanelPosition({ left: margin, top: margin })
+      setPanelSize({
+        width: Math.max(MIN_PANEL_WIDTH, rootRect.width - margin * 2),
+        height: Math.max(MIN_PANORAMA_HEIGHT, rootRect.height - margin * 2 - titlebarHeight)
+      })
+    }
+
+    applyDefaultFullSize()
+    const observer = new ResizeObserver(applyDefaultFullSize)
+    observer.observe(root)
+    return () => observer.disconnect()
+  }, [])
 
   const [jimuMapView, setJimuMapView] = React.useState<JimuMapView>(null)
   const jimuMapViewRef = React.useRef<JimuMapView>(null)
@@ -367,6 +398,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     const panel = panelRef.current
     const root = widgetRootRef.current
     if (!panel || !root) return
+    hasCustomSizeRef.current = true
     event.currentTarget.setPointerCapture(event.pointerId)
     const panelRect = panel.getBoundingClientRect()
     const rootRect = root.getBoundingClientRect()
@@ -403,6 +435,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       const panel = panelRef.current
       const root = widgetRootRef.current
       if (!panel || !root) return
+      hasCustomSizeRef.current = true
       event.stopPropagation()
       event.currentTarget.setPointerCapture(event.pointerId)
       const panelRect = panel.getBoundingClientRect()
