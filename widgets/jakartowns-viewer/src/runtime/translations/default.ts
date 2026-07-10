@@ -2,7 +2,6 @@ export default {
   _widgetLabel: 'Jakartowns Viewer',
   noMapWidgetLinked: "Ce widget n'est lié à aucune carte. Ouvrez ses réglages et choisissez un widget Carte.",
   waitingForMap: 'Connexion à la carte liée…',
-  mapLinkedPlaceholder: 'Carte liée. Intégration Jakartowns à venir.',
   loginTitle: 'Connexion Jakarto',
   loginLabel: "Clé d'API Jakarto",
   loginButton: 'Se connecter',
@@ -10,5 +9,10 @@ export default {
   loginError: "Échec de la connexion. Vérifiez votre clé d'API.",
   loginLink: 'Récupérer votre clé API',
   logoutButton: 'Déconnexion',
-  openInJakartownsLink: 'Ouvrir dans Jakartowns ↗'
+  openInJakartownsLink: 'Ouvrir dans Jakartowns ↗',
+  foldPanel: 'Replier',
+  unfoldPanel: 'Déplier',
+  pickingModeLabel: 'Cliquer sur la carte',
+  pickingModeHint: 'Cliquez ici puis sur la carte pour localiser le panorama (ou faites un clic droit sur la carte à tout moment).',
+  multipassUnknownDate: 'Date inconnue'
 }
