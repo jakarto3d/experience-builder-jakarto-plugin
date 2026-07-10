@@ -30,6 +30,7 @@ const JAKARTO_LOGOUT_URL = 'https://account.jakarto.com/users/logout'
 const JAKARTOWNS_SCRIPT_URL = 'https://maps.jakarto.com/api/v1.js'
 const JAKARTOWNS_APP_URL = 'https://maps.jakarto.com/'
 const API_KEY_STORAGE_KEY = 'jakartowns-viewer:apiKey'
+const SETTINGS_STORAGE_KEY = 'jakartowns-viewer:settings'
 
 export interface JakartoPosition {
   latitude: number
@@ -132,6 +133,39 @@ function clearStoredApiKey(): void {
   }
 }
 
+/** Réglages du widget que l'utilisateur peut activer explicitement (cf. panneau réglages). */
+export interface JakartoWidgetSettings {
+  /**
+   * Le clic droit sur la carte peut entrer en conflit avec un comportement
+   * par défaut de l'application hôte — désactivé tant que l'utilisateur ne
+   * l'active pas explicitement.
+   */
+  rightClickToLocate: boolean
+}
+
+const DEFAULT_SETTINGS: JakartoWidgetSettings = {
+  rightClickToLocate: false
+}
+
+/** Charge les réglages du widget depuis localStorage (repli sur les valeurs par défaut). */
+export function getStoredSettings(): JakartoWidgetSettings {
+  try {
+    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (!raw) return { ...DEFAULT_SETTINGS }
+    return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
+  } catch {
+    return { ...DEFAULT_SETTINGS }
+  }
+}
+
+export function storeSettings(settings: JakartoWidgetSettings): void {
+  try {
+    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+  } catch {
+    // pas bloquant : le réglage ne persistera juste pas entre deux visites.
+  }
+}
+
 /**
  * Échange une clé API Jakarto contre un cookie de session, et la met en
  * cache localement en cas de succès pour éviter de la redemander au
@@ -200,8 +234,6 @@ export interface JakartoViewerHandle {
   setPosition: (position: JakartoPosition) => void
   /** Affiche une image précise parmi celles disponibles au même endroit (multipass). */
   setImage: (imageId: string) => void
-  /** Change l'orientation horizontale (radians, convention Jakartowns — voir buildJakartownsUrl). */
-  setPan: (value: number) => void
   /** Snapshot synchrone de l'état actuel (position, image, orientation) — utilisé au clic sur "Ouvrir dans Jakartowns". */
   getViewState: () => JakartoViewState
   /** Arrête de propager les événements du viewer (à appeler au démontage du widget). */
@@ -324,10 +356,6 @@ export async function initializeViewer(
           setImage: (imageId) => {
             if (destroyed) return
             viewer.setImage(imageId)
-          },
-          setPan: (value) => {
-            if (destroyed) return
-            viewer.setPan(value)
           },
           getViewState: () => ({ ...state }),
           destroy: () => {

@@ -12,9 +12,10 @@ export default {
   openInJakartownsLink: 'Ouvrir dans Jakartowns ↗',
   foldPanel: 'Replier',
   unfoldPanel: 'Déplier',
-  pickingModeLabel: 'Cliquer sur la carte',
-  pickingModeHint: 'Cliquez ici puis sur la carte pour localiser le panorama (ou faites un clic droit sur la carte à tout moment).',
+  pickingModeHint: 'Cliquer sur la carte pour localiser le panorama.',
   multipassUnknownDate: 'Date inconnue',
   timelineScrollPrevious: 'Dates précédentes',
-  timelineScrollNext: 'Dates suivantes'
+  timelineScrollNext: 'Dates suivantes',
+  settingsLabel: 'Réglages',
+  settingsRightClickLabel: 'Activer le clic droit sur la carte pour localiser le panorama'
 }

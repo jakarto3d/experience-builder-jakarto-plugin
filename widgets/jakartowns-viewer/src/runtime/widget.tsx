@@ -7,11 +7,13 @@ import {
   logout,
   initializeViewer,
   buildJakartownsUrl,
+  getStoredSettings,
+  storeSettings,
   type JakartoPosition,
   type JakartoViewerHandle,
-  type JakartoMultipassImage
+  type JakartoMultipassImage,
+  type JakartoWidgetSettings
 } from './services/jakarto'
-import { projectPoint, reflectAngle, getJakartownsPanTowards, LOOK_AHEAD_DISTANCE_METERS, type LatLng } from './lib/lookAt'
 import { useSpatialSync } from './hooks/useSpatialSync'
 import defaultMessages from './translations/default'
 import './widget.css'
@@ -92,6 +94,14 @@ const IconExternalLink = () => (
   </svg>
 )
 
+const IconGear = () => (
+  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+  </svg>
+)
+
 function formatJakartoDate(dateString: string | null): string | null {
   if (!dateString) return null
   const date = new Date(dateString)
@@ -135,10 +145,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const viewerContainerRef = React.useRef<HTMLDivElement>(null)
   const viewerHandleRef = React.useRef<JakartoViewerHandle>(null)
   const timelineListRef = React.useRef<HTMLDivElement>(null)
-  // Point visé calculé avant un changement d'image multipass, consommé au
-  // prochain événement `position` (celui déclenché par ce changement) pour
-  // réorienter la caméra vers le même repère visuel. Cf. src/runtime/lib/lookAt.ts.
-  const pendingLookAtTargetRef = React.useRef<LatLng | null>(null)
+
+  const [settings, setSettings] = React.useState<JakartoWidgetSettings>(() => getStoredSettings())
+  const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
+  const settingsPopoverRef = React.useRef<HTMLDivElement>(null)
 
   // Dernière position connue (clic carte ou navigation Jakartowns), utilisée
   // en repli pour le bouton "Ouvrir dans Jakartowns" tant qu'aucune image
@@ -164,6 +174,24 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   React.useEffect(() => {
     isPickingEnabledRef.current = isPickingEnabled
   }, [isPickingEnabled])
+
+  // Ferme le popover de réglages au clic en dehors.
+  React.useEffect(() => {
+    if (!isSettingsOpen) return
+    const onPointerDownOutside = (event: PointerEvent) => {
+      if (!settingsPopoverRef.current?.contains(event.target as Node)) {
+        setIsSettingsOpen(false)
+      }
+    }
+    document.addEventListener('pointerdown', onPointerDownOutside)
+    return () => document.removeEventListener('pointerdown', onPointerDownOutside)
+  }, [isSettingsOpen])
+
+  const handleToggleRightClickSetting = (checked: boolean) => {
+    const next = { ...settings, rightClickToLocate: checked }
+    setSettings(next)
+    storeSettings(next)
+  }
 
   // Reconnexion automatique si une clé API a déjà été validée sur ce
   // navigateur (cf. services/jakarto.ts — contourne le CORS bloquant sur
@@ -201,27 +229,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   }
 
   const handleSelectImage = (imageId: string) => {
-    const handle = viewerHandleRef.current
-    if (!handle) return
-
-    // Avant de changer d'image, on retient un point ~20m devant la vue
-    // actuelle : les images "au même endroit" ne sont pas forcément captées
-    // exactement à la même position (voie différente, quelques mètres
-    // d'écart), donc on essaie de garder le même repère visuel plutôt que de
-    // juste réinitialiser l'orientation.
-    const viewState = handle.getViewState()
-    if (viewState.latitude != null && viewState.longitude != null && viewState.pan != null) {
-      const currentBearing = reflectAngle(viewState.pan)
-      pendingLookAtTargetRef.current = projectPoint(
-        { lat: viewState.latitude, lng: viewState.longitude },
-        currentBearing,
-        LOOK_AHEAD_DISTANCE_METERS
-      )
-    } else {
-      pendingLookAtTargetRef.current = null
-    }
-
-    handle.setImage(imageId)
+    viewerHandleRef.current?.setImage(imageId)
   }
 
   const handleOpenInJakartowns = () => {
@@ -257,13 +265,6 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             const activeView = jimuMapViewRef.current?.view
             activeView?.goTo({ center: [p.longitude, p.latitude] }, { duration: 600 })
           })
-
-          const pendingTarget = pendingLookAtTargetRef.current
-          if (pendingTarget) {
-            pendingLookAtTargetRef.current = null
-            const newPan = getJakartownsPanTowards(position, pendingTarget)
-            viewerHandleRef.current?.setPan(newPan)
-          }
         }
         setCurrentDate(state.date)
         setCurrentImageId(state.imageId)
@@ -287,7 +288,9 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   // Relaie vers le panorama Jakartowns : un clic gauche quand le mode
   // "pointage" est armé (désarmé automatiquement après usage), ou un clic
-  // droit à tout moment (empêche le menu contextuel du navigateur).
+  // droit — seulement si l'utilisateur l'a explicitement activé dans les
+  // réglages (désactivé par défaut : peut entrer en conflit avec un
+  // comportement par défaut de l'application hôte).
   React.useEffect(() => {
     const view = jimuMapView?.view
     if (!view) return
@@ -308,6 +311,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     })
 
     const onContextMenu = (event: MouseEvent) => {
+      if (!settings.rightClickToLocate) return
       event.preventDefault()
       const rect = view.container.getBoundingClientRect()
       const mapPoint = view.toMap({ x: event.clientX - rect.left, y: event.clientY - rect.top })
@@ -319,14 +323,14 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       clickHandle.remove()
       view.container?.removeEventListener('contextmenu', onContextMenu)
     }
-  }, [jimuMapView, spatialSync])
+  }, [jimuMapView, spatialSync, settings.rightClickToLocate])
 
   const handleTitleBarPointerDown = (event: React.PointerEvent) => {
     // Sans ce garde-fou, cliquer sur un bouton de la barre de titre (déconnexion,
     // replier) démarre quand même un glisser-déposer : le pointerdown remonte
     // (bubbling) jusqu'ici, setPointerCapture capture le pointeur sur la barre de
     // titre, et le click du bouton ne se déclenche alors plus jamais.
-    if ((event.target as HTMLElement).closest('button')) return
+    if ((event.target as HTMLElement).closest('button, input, label, .jakartowns-viewer-settings-popover')) return
     const panel = panelRef.current
     const root = widgetRootRef.current
     if (!panel || !root) return
@@ -472,6 +476,47 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           >
             <span className="jakartowns-viewer-panel-title">Jakartowns</span>
             <div className="jakartowns-viewer-panel-titlebar-actions">
+              <div className="jakartowns-viewer-settings-anchor">
+                <button
+                  type="button"
+                  className="jakartowns-viewer-icon-btn"
+                  aria-pressed={isSettingsOpen}
+                  title={defaultMessages.settingsLabel}
+                  onClick={() => setIsSettingsOpen((open) => !open)}
+                >
+                  <IconGear />
+                </button>
+                {isSettingsOpen && (
+                  <div className="jakartowns-viewer-settings-popover" ref={settingsPopoverRef}>
+                    <label className="jakartowns-viewer-settings-row">
+                      <input
+                        type="checkbox"
+                        checked={settings.rightClickToLocate}
+                        onChange={(e) => handleToggleRightClickSetting(e.target.checked)}
+                      />
+                      {defaultMessages.settingsRightClickLabel}
+                    </label>
+                  </div>
+                )}
+              </div>
+              <button
+                type="button"
+                className="jakartowns-viewer-icon-btn"
+                aria-pressed={isPickingEnabled}
+                title={defaultMessages.pickingModeHint}
+                onClick={() => setIsPickingEnabled((enabled) => !enabled)}
+              >
+                <IconTarget />
+              </button>
+              <button
+                type="button"
+                className="jakartowns-viewer-icon-btn"
+                title={defaultMessages.openInJakartownsLink}
+                onClick={handleOpenInJakartowns}
+                disabled={!currentImageId}
+              >
+                <IconExternalLink />
+              </button>
               {isAuthenticated && (
                 <button
                   type="button"
@@ -501,29 +546,6 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             Jakartowns ne le recrée pas tout seul dans une nouvelle div vide.
           */}
           <div className={'jakartowns-viewer-panel-body' + (isPanelFolded ? ' jakartowns-viewer-panel-body--hidden' : '')}>
-            <div className="jakartowns-viewer-panel-toolbar">
-              <button
-                type="button"
-                className="jakartowns-viewer-toolbar-btn"
-                aria-pressed={isPickingEnabled}
-                title={defaultMessages.pickingModeHint}
-                onClick={() => setIsPickingEnabled((enabled) => !enabled)}
-              >
-                <IconTarget />
-                {defaultMessages.pickingModeLabel}
-              </button>
-              <button
-                type="button"
-                className="jakartowns-viewer-toolbar-btn"
-                title={defaultMessages.openInJakartownsLink}
-                onClick={handleOpenInJakartowns}
-                disabled={!currentImageId}
-              >
-                <IconExternalLink />
-                {defaultMessages.openInJakartownsLink}
-              </button>
-            </div>
-
             {!isAuthenticated && (
               <div className="jakartowns-viewer-login">
                 <h3 className="jakartowns-viewer-login-title">{defaultMessages.loginTitle}</h3>
