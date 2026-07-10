@@ -2,6 +2,70 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Refonte UX : panneau flottant, mode pointage, multipass, date, persistance de la clé
+
+Demande utilisateur : rendre l'UI plus sobre/moderne, et ajouter plusieurs
+comportements inspirés de l'asset viewer Jakarto (`jakassets-viewer`, déjà
+consulté plus haut pour le debug).
+
+- **Service `jakarto.ts`** : `initializeViewer` suit maintenant, en plus de
+  la position, les événements `rotation`/`tilt`/`fov` (globaux sur
+  `window`, comme `position`) et expose `getViewState()` (snapshot
+  synchrone) + `setImage(uid)`. Choix volontaire : pan/tilt/fov ne
+  déclenchent PAS de callback React à chaque micro-rotation (que la souris
+  peut envoyer très souvent) — ils restent en interne, lus seulement au
+  clic sur "Ouvrir dans Jakartowns" via `getViewState()`. Évite un churn de
+  re-render inutile.
+- **`buildJakartownsUrl`** privilégie désormais le paramètre `uid` (image
+  exacte) sur lat/lng dès qu'une image est chargée — reprend exactement le
+  pattern du bouton de redirection de `jakassets-viewer`
+  (`?pan=…&tilt=…&fov=…&uid=…`, sans lat/lng).
+- **Persistance de la clé API** : `authenticate()` la sauvegarde dans
+  `localStorage` (`jakartowns-viewer:apiKey`) en cas de succès ; `logout()`
+  l'efface. Au montage, le widget tente une reconnexion automatique avec la
+  clé en cache. Remplace l'ancien `checkAuthStatus()` (supprimé — bloqué par
+  CORS dans la plupart des contextes, ne servait plus à rien).
+  **Compromis assumé** : la clé est en clair côté navigateur, pas chiffrée.
+- **`create_jakartowns`** : `headerEnabled: false` (le widget affiche sa
+  propre bannière "Jakartowns", rendant le header natif redondant),
+  `compassEnabled: true`. `config.ts`/`config.json`/`setting.tsx` simplifiés
+  en conséquence (ces deux options ne sont plus configurables, elles sont
+  fixées côté code).
+- **Panneau flottant** : le panorama (+ toolbar + login + date + multipass)
+  vit dans un panneau `position: absolute`, avec une barre de titre
+  affichant "Jakartowns" (mention explicite demandée), un bouton
+  replier/déplier (chevron), et un bouton déconnexion qui ne recouvre plus
+  le panorama (contrairement à l'ancien bouton flottant par-dessus). La
+  barre de titre sert aussi de poignée de glisser-déposer (Pointer Events),
+  avec la position bornée aux limites du widget lui-même — pas de vrai
+  Picture-in-Picture hors fenêtre (voir décision ci-dessous).
+- **Mode pointage** : la carte ne réagit plus à *chaque* clic (source de
+  frustration potentielle si l'utilisateur clique pour d'autres raisons).
+  Un bouton arme un clic gauche ponctuel (désarmé automatiquement après
+  usage) ; le clic droit sur la carte fonctionne lui à tout moment sans
+  rien armer (implémenté via un écouteur DOM natif `contextmenu` sur
+  `view.container`, `view.toMap()` pour convertir l'écran en coordonnées
+  carte, `preventDefault()` pour supprimer le menu contextuel du
+  navigateur — l'API MapView elle-même n'expose pas d'événement clic droit).
+- **Date + multipass** : la date de l'image affichée vient de
+  `currentSphereInfo.properties.date` (événement `position`), la liste des
+  images disponibles au même endroit de `multipassAtLocation` — même
+  source de données que la liste que `jakassets-viewer` construit pour son
+  propre sélecteur. Affiché seulement si plus d'une image est disponible.
+
+### Décision : pas de vrai Picture-in-Picture pour l'instant
+
+L'utilisateur a suggéré un mode "PiP" qui sortirait le panneau de la
+fenêtre du navigateur (pas juste le déplacer dans le widget). L'API
+`documentPictureInPicture` (Chrome/Edge) permettrait ça, mais elle déplace
+réellement le nœud DOM vers un autre `document` — risque concret de perte
+du contexte WebGL du canvas Jakartowns pendant ce transfert (comportement
+non garanti, dépend du navigateur). Vu le risque de casser le panorama pour
+un gain incertain, j'ai implémenté le déplacement/repli *dans* les limites
+du widget (couvre la demande principale) et documenté le vrai PiP comme
+piste future séparée plutôt que de le tenter à l'aveugle dans cette
+itération.
+
 ## 2026-07-10 — 🎉 Premier succès de bout en bout
 
 Confirmé par l'utilisateur : le panorama Jakartowns s'affiche maintenant
