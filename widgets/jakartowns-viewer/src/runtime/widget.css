@@ -5,14 +5,20 @@
   position: relative;
   overflow: hidden;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
-  /*
-   * Le widget occupe tout son emplacement dans la mise en page (souvent
-   * bien plus grand que le panneau flottant lui-même, pour lui laisser de
-   * la place où se déplacer). Sans ça, ce conteneur entièrement transparent
-   * intercepterait quand même les clics destinés à la carte en-dessous sur
-   * toute sa surface. Seul le panneau (voir plus bas) redevient interactif.
-   */
-  pointer-events: none;
+}
+
+/*
+ * Le widget occupe tout son emplacement dans la mise en page (souvent bien
+ * plus grand que le panneau flottant lui-même, pour lui laisser de la place
+ * où se déplacer). Sans ça, ce conteneur entièrement transparent
+ * intercepterait quand même les clics destinés à la carte en-dessous sur
+ * toute sa surface. Sélecteur à deux classes + !important : une règle
+ * générique d'Experience Builder sur `.jimu-widget` (pointer-events: auto
+ * par défaut, probablement) pourrait sinon l'emporter selon l'ordre de
+ * chargement des feuilles de style.
+ */
+.jakartowns-viewer-widget.jimu-widget {
+  pointer-events: none !important;
 }
 
 .jakartowns-viewer-placeholder {
@@ -25,7 +31,7 @@
   padding: 1rem;
   color: var(--ref-palette-neutral-800, #444);
   font-size: 0.9rem;
-  pointer-events: auto;
+  pointer-events: auto !important;
 }
 
 /* ─── Panneau flottant ──────────────────────────────────────────────── */
@@ -38,12 +44,12 @@
   max-height: calc(100% - 24px);
   display: flex;
   flex-direction: column;
+  pointer-events: auto !important;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2), 0 1px 2px rgba(15, 23, 42, 0.08);
   overflow: hidden;
   z-index: 20;
-  pointer-events: auto;
 }
 
 .jakartowns-viewer-panel-titlebar {
@@ -303,24 +309,83 @@
   border-color: #2f6fed;
 }
 
-/* ─── Poignée de redimensionnement ──────────────────────────────────── */
+/* ─── Poignées de redimensionnement (4 bords + 4 coins) ─────────────── */
 
 .jakartowns-viewer-resize-handle {
   position: absolute;
-  right: 2px;
-  bottom: 2px;
-  width: 16px;
-  height: 16px;
-  cursor: nwse-resize;
   touch-action: none;
   z-index: 25;
 }
 
-.jakartowns-viewer-resize-handle::after {
+.jakartowns-viewer-resize-handle-n,
+.jakartowns-viewer-resize-handle-s {
+  left: 10px;
+  right: 10px;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.jakartowns-viewer-resize-handle-n {
+  top: -4px;
+}
+
+.jakartowns-viewer-resize-handle-s {
+  bottom: -4px;
+}
+
+.jakartowns-viewer-resize-handle-e,
+.jakartowns-viewer-resize-handle-w {
+  top: 10px;
+  bottom: 10px;
+  width: 8px;
+  cursor: ew-resize;
+}
+
+.jakartowns-viewer-resize-handle-e {
+  right: -4px;
+}
+
+.jakartowns-viewer-resize-handle-w {
+  left: -4px;
+}
+
+.jakartowns-viewer-resize-handle-ne,
+.jakartowns-viewer-resize-handle-nw,
+.jakartowns-viewer-resize-handle-se,
+.jakartowns-viewer-resize-handle-sw {
+  width: 14px;
+  height: 14px;
+}
+
+.jakartowns-viewer-resize-handle-ne {
+  top: -4px;
+  right: -4px;
+  cursor: nesw-resize;
+}
+
+.jakartowns-viewer-resize-handle-nw {
+  top: -4px;
+  left: -4px;
+  cursor: nwse-resize;
+}
+
+.jakartowns-viewer-resize-handle-se {
+  bottom: -4px;
+  right: -4px;
+  cursor: nwse-resize;
+}
+
+.jakartowns-viewer-resize-handle-sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: nesw-resize;
+}
+
+.jakartowns-viewer-resize-handle-se::after {
   content: '';
   position: absolute;
-  right: 3px;
-  bottom: 3px;
+  right: 4px;
+  bottom: 4px;
   width: 8px;
   height: 8px;
   border-right: 2px solid #94a3b8;

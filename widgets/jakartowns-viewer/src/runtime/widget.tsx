@@ -36,10 +36,16 @@ interface ResizeState {
   pointerId: number
   startClientX: number
   startClientY: number
+  startLeft: number
+  startTop: number
   startWidth: number
   startHeight: number
-  maxWidth: number
-  maxHeight: number
+  /** -1 = poignée à gauche (déplace + redimensionne), 1 = à droite (redimensionne seulement), 0 = pas concerné par cet axe. */
+  directionX: -1 | 0 | 1
+  /** Idem verticalement : -1 = en haut, 1 = en bas. */
+  directionY: -1 | 0 | 1
+  rootWidth: number
+  rootHeight: number
 }
 
 interface PanelPosition {
@@ -316,6 +322,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   }, [jimuMapView, spatialSync])
 
   const handleTitleBarPointerDown = (event: React.PointerEvent) => {
+    // Sans ce garde-fou, cliquer sur un bouton de la barre de titre (déconnexion,
+    // replier) démarre quand même un glisser-déposer : le pointerdown remonte
+    // (bubbling) jusqu'ici, setPointerCapture capture le pointeur sur la barre de
+    // titre, et le click du bouton ne se déclenche alors plus jamais.
+    if ((event.target as HTMLElement).closest('button')) return
     const panel = panelRef.current
     const root = widgetRootRef.current
     if (!panel || !root) return
@@ -350,34 +361,58 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     }
   }
 
-  const handleResizeHandlePointerDown = (event: React.PointerEvent) => {
-    const panel = panelRef.current
-    const root = widgetRootRef.current
-    if (!panel || !root) return
-    event.stopPropagation()
-    event.currentTarget.setPointerCapture(event.pointerId)
-    const panelRect = panel.getBoundingClientRect()
-    const rootRect = root.getBoundingClientRect()
-    resizeStateRef.current = {
-      pointerId: event.pointerId,
-      startClientX: event.clientX,
-      startClientY: event.clientY,
-      startWidth: panelSize.width,
-      startHeight: panelSize.height,
-      maxWidth: Math.max(MIN_PANEL_WIDTH, rootRect.right - panelRect.left),
-      maxHeight: Math.max(MIN_PANORAMA_HEIGHT, rootRect.bottom - panelRect.top)
+  const handleResizeHandlePointerDown = (directionX: -1 | 0 | 1, directionY: -1 | 0 | 1) =>
+    (event: React.PointerEvent) => {
+      const panel = panelRef.current
+      const root = widgetRootRef.current
+      if (!panel || !root) return
+      event.stopPropagation()
+      event.currentTarget.setPointerCapture(event.pointerId)
+      const panelRect = panel.getBoundingClientRect()
+      const rootRect = root.getBoundingClientRect()
+      resizeStateRef.current = {
+        pointerId: event.pointerId,
+        startClientX: event.clientX,
+        startClientY: event.clientY,
+        startLeft: panelRect.left - rootRect.left,
+        startTop: panelRect.top - rootRect.top,
+        startWidth: panelSize.width,
+        startHeight: panelSize.height,
+        directionX,
+        directionY,
+        rootWidth: rootRect.width,
+        rootHeight: rootRect.height
+      }
     }
-  }
 
   const handleResizeHandlePointerMove = (event: React.PointerEvent) => {
     const resize = resizeStateRef.current
     if (!resize || event.pointerId !== resize.pointerId) return
     const dx = event.clientX - resize.startClientX
     const dy = event.clientY - resize.startClientY
-    setPanelSize({
-      width: Math.min(Math.max(MIN_PANEL_WIDTH, resize.startWidth + dx), resize.maxWidth),
-      height: Math.min(Math.max(MIN_PANORAMA_HEIGHT, resize.startHeight + dy), resize.maxHeight)
-    })
+
+    let width = resize.startWidth
+    let left = resize.startLeft
+    if (resize.directionX === 1) {
+      width = Math.min(Math.max(MIN_PANEL_WIDTH, resize.startWidth + dx), resize.rootWidth - resize.startLeft)
+    } else if (resize.directionX === -1) {
+      width = Math.min(Math.max(MIN_PANEL_WIDTH, resize.startWidth - dx), resize.startLeft + resize.startWidth)
+      left = Math.max(0, resize.startLeft + (resize.startWidth - width))
+    }
+
+    let height = resize.startHeight
+    let top = resize.startTop
+    if (resize.directionY === 1) {
+      height = Math.min(Math.max(MIN_PANORAMA_HEIGHT, resize.startHeight + dy), resize.rootHeight - resize.startTop)
+    } else if (resize.directionY === -1) {
+      height = Math.min(Math.max(MIN_PANORAMA_HEIGHT, resize.startHeight - dy), resize.startTop + resize.startHeight)
+      top = Math.max(0, resize.startTop + (resize.startHeight - height))
+    }
+
+    setPanelSize({ width, height })
+    if (resize.directionX === -1 || resize.directionY === -1) {
+      setPanelPosition({ left, top })
+    }
   }
 
   const handleResizeHandlePointerUp = (event: React.PointerEvent) => {
@@ -560,12 +595,56 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           )}
 
           {!isPanelFolded && (
-            <div
-              className="jakartowns-viewer-resize-handle"
-              onPointerDown={handleResizeHandlePointerDown}
-              onPointerMove={handleResizeHandlePointerMove}
-              onPointerUp={handleResizeHandlePointerUp}
-            />
+            <>
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-n"
+                onPointerDown={handleResizeHandlePointerDown(0, -1)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-s"
+                onPointerDown={handleResizeHandlePointerDown(0, 1)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-e"
+                onPointerDown={handleResizeHandlePointerDown(1, 0)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-w"
+                onPointerDown={handleResizeHandlePointerDown(-1, 0)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-ne"
+                onPointerDown={handleResizeHandlePointerDown(1, -1)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-nw"
+                onPointerDown={handleResizeHandlePointerDown(-1, -1)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-se"
+                onPointerDown={handleResizeHandlePointerDown(1, 1)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+              <div
+                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-sw"
+                onPointerDown={handleResizeHandlePointerDown(-1, 1)}
+                onPointerMove={handleResizeHandlePointerMove}
+                onPointerUp={handleResizeHandlePointerUp}
+              />
+            </>
           )}
         </div>
       )}
