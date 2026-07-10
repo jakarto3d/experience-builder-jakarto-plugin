@@ -150,7 +150,14 @@
 .jakartowns-viewer-settings-popover {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  /*
+   * Ancré par la droite (pas la gauche) : le bouton réglages est près du
+   * bord droit du panneau, donc le popover s'ouvre vers l'intérieur au lieu
+   * de déborder à droite — où il se ferait couper par le `overflow: hidden`
+   * du panneau (nécessaire pour ses coins arrondis).
+   */
+  right: 0;
+  max-width: calc(100% - 4px);
   z-index: 30;
   width: 240px;
   padding: 10px;
@@ -309,6 +316,15 @@
   background: rgba(15, 23, 42, 0.8);
 }
 
+.jakartowns-viewer-timeline-arrow:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.jakartowns-viewer-timeline-arrow:disabled:hover {
+  background: rgba(15, 23, 42, 0.55);
+}
+
 .jakartowns-viewer-timeline-list {
   flex: 1;
   min-width: 0;
@@ -336,8 +352,14 @@
   white-space: nowrap;
 }
 
+@keyframes jakartowns-viewer-chip-wave {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
 .jakartowns-viewer-multipass-chip:hover {
   background: rgba(15, 23, 42, 0.75);
+  animation: jakartowns-viewer-chip-wave 0.6s ease-in-out infinite;
 }
 
 .jakartowns-viewer-multipass-chip.is-selected {

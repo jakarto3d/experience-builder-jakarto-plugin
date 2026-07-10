@@ -471,6 +471,27 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       ? [{ imageId: currentImageId, date: currentDate }]
       : []
 
+  // Désactive les flèches quand le fil des dates tient déjà dans l'espace
+  // disponible (rien à faire défiler).
+  const [canScrollTimeline, setCanScrollTimeline] = React.useState(false)
+
+  const updateCanScrollTimeline = React.useCallback(() => {
+    const el = timelineListRef.current
+    setCanScrollTimeline(!!el && el.scrollWidth > el.clientWidth + 1)
+  }, [])
+
+  React.useEffect(() => {
+    updateCanScrollTimeline()
+  }, [timelineEntries, panelSize.width, updateCanScrollTimeline])
+
+  React.useEffect(() => {
+    const el = timelineListRef.current
+    if (!el) return
+    const observer = new ResizeObserver(updateCanScrollTimeline)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [updateCanScrollTimeline])
+
   return (
     <div className="jakartowns-viewer-widget jimu-widget" ref={widgetRootRef}>
       {hasLinkedMap && (
@@ -622,6 +643,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                       className="jakartowns-viewer-timeline-arrow"
                       aria-label={defaultMessages.timelineScrollPrevious}
                       onClick={() => scrollTimeline(-1)}
+                      disabled={!canScrollTimeline}
                     >
                       ‹
                     </button>
@@ -645,6 +667,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                       className="jakartowns-viewer-timeline-arrow"
                       aria-label={defaultMessages.timelineScrollNext}
                       onClick={() => scrollTimeline(1)}
+                      disabled={!canScrollTimeline}
                     >
                       ›
                     </button>
