@@ -9,7 +9,6 @@ depuis une expérience ArcGIS (ex. `sig.mascouche.ca`).
 | Dossier | Rôle |
 |---|---|
 | [`widgets/jakartowns-viewer/`](widgets/jakartowns-viewer/) | Le widget Experience Builder en cours de développement (livrable principal). |
-| [`esri_js_sdk_demo/`](esri_js_sdk_demo/) | Prototype Vue autonome antérieur (non-ExB) démontrant la synchronisation carte ↔ panorama. Gardé comme référence de logique métier, pas comme code à déployer tel quel. |
 | [`docs/`](docs/) | Notes de recherche et journal d'avancement. |
 
 ## État d'avancement
