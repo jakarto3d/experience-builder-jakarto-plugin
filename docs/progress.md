@@ -2,6 +2,27 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — 🎉 Premier succès de bout en bout
+
+Confirmé par l'utilisateur : le panorama Jakartowns s'affiche maintenant
+dans le widget, et cliquer sur la carte ArcGIS liée déplace bien le
+panorama au bon endroit (adresse affichée dans la barre Jakartowns cohérente
+avec le point cliqué). Les quatre bugs trouvés dans cette session de debug
+(`config.json` manquant, `useMapWidgetIds` au lieu de `useMapWidgetId`,
+`viewer.on()` inexistant, collision d'id `#app`) formaient la chaîne
+complète de blocages — plus aucun d'entre eux ne semble bloquant.
+
+Reste à valider (non testé à ce stade) :
+- La synchro dans l'autre sens : naviguer/tourner dans le panorama doit
+  recentrer la carte ArcGIS (`view.goTo(...)`, événement `position` déjà
+  câblé sur ce même event `window` corrigé plus haut — devrait fonctionner
+  mais pas encore confirmé visuellement).
+- Le lien "Ouvrir dans Jakartowns ↗" (API URL, visible dans les captures
+  mais pas encore cliqué/vérifié).
+- Le comportement en dehors de `localhost` (le CORS sur `account.jakarto.com`
+  pourrait se comporter différemment sur le domaine réel du portail
+  `sig.mascouche.ca`).
+
 ## 2026-07-10 — Deux bugs de plus trouvés via la Console : `.on()` inexistant + collision d'id `#app`
 
 En regardant la Console (pas seulement Network) après le fix précédent,
