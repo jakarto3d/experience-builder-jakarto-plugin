@@ -1,0 +1,59 @@
+# Widget Experience Builder — Jakartowns Viewer
+
+Widget custom qui affiche le panorama **Jakartowns** synchronisé avec un
+widget **Map** d'ArcGIS Experience Builder : cliquer sur la carte déplace le
+panorama, naviguer dans le panorama recentre la carte.
+
+## Statut
+
+Scaffold en cours — voir [`docs/progress.md`](../../docs/progress.md) à la
+racine du dépôt pour le journal détaillé et l'état exact de chaque partie.
+
+## Installation dans une ArcGIS Experience Builder Developer Edition
+
+Ce dossier n'est **pas** un projet buildable en autonomie : il doit être
+copié dans le web extension repo d'une installation Developer Edition
+existante.
+
+1. Télécharger/installer ArcGIS Experience Builder Developer Edition (voir la
+   documentation Esri officielle : https://developers.arcgis.com/experience-builder/guide/getting-started-widget/).
+2. Copier ce dossier entier (`jakartowns-viewer/`) dans :
+   ```
+   <installation-exb>/client/your-extensions/widgets/jakartowns-viewer/
+   ```
+3. Depuis `<installation-exb>/client`, lancer `npm start` (ou redémarrer le
+   serveur de dev s'il tournait déjà — les nouveaux widgets ne sont détectés
+   qu'au démarrage).
+4. Ouvrir le builder ExB local, ajouter le widget **Jakartowns Viewer** à une
+   page contenant déjà un widget **Map**.
+5. Dans les réglages du widget, sélectionner le widget Map à lier
+   (`Carte liée`).
+
+## Utilisation
+
+- Un visiteur doit renseigner sa propre clé d'API Jakarto (récupérable sur
+  https://solutions.jakarto.com/profile) pour afficher le panorama —
+  décision produit : pas de clé partagée par défaut (voir
+  `docs/progress.md`, entrée du 2026-07-10).
+- Une fois connecté, cliquer sur la carte liée déplace le panorama
+  Jakartowns à cet endroit ; naviguer dans le panorama recentre la carte.
+
+## Limitations connues (à vérifier en environnement réel)
+
+- Code non compilé/testé localement (pas de Developer Edition disponible au
+  moment de l'écriture — `jimu-core`/`jimu-arcgis`/`jimu-ui` ne sont
+  résolubles que depuis le build system d'une vraie installation ExB).
+- Le flux d'authentification Jakartowns pose un cookie de session
+  **partitionné** sur `account.jakarto.com` / `maps.jakarto.com` — son
+  comportement dans le contexte d'un widget hébergé sous un domaine
+  ArcGIS (ex. `sig.mascouche.ca`) n'a pas été vérifié. Premier test à faire
+  une fois déployé.
+
+## Pistes futures (hors scope MVP)
+
+- Publier une **Message Action** (`publishMessages` dans `manifest.json`)
+  quand la position Jakartowns change, pour que d'autres widgets de la page
+  (pas seulement la carte liée) puissent réagir sans couplage direct.
+- Support de la sélection d'image/date via l'événement `position` du
+  viewer Jakartowns (`multipassAtLocation`), pour choisir entre plusieurs
+  captures disponibles au même endroit.
