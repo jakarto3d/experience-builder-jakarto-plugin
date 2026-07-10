@@ -2,6 +2,51 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Pointer-events, redimensionnement, fil des dates, orientation au changement d'image
+
+Retours utilisateur après test du panneau flottant :
+
+- **"Pourquoi la boîte est plus grande que le widget, et bloque les clics
+  sur la carte ?"** — Le widget occupe toute la place qui lui est allouée
+  dans la mise en page (souvent bien plus grand que le panneau visible, par
+  exemple pour laisser de la place où le déplacer). Ce conteneur, même
+  visuellement transparent, restait un `<div>` normal qui interceptait donc
+  tous les clics sur toute sa surface. **Fix** : `pointer-events: none` sur
+  `.jakartowns-viewer-widget`, `pointer-events: auto` uniquement sur
+  `.jakartowns-viewer-panel` — les zones vides laissent maintenant vraiment
+  passer les clics vers la carte. Ça répond aussi indirectement à "je veux
+  pouvoir le déplacer n'importe où" : il suffit d'agrandir la zone du
+  widget lui-même dans le builder (ses poignées de redimensionnement), le
+  panneau peut alors être glissé n'importe où dans cette zone sans plus
+  bloquer le reste de la carte.
+- **Redimensionnement** : poignée en coin bas-droit du panneau (Pointer
+  Events), ajuste la largeur du panneau et la hauteur de la zone panorama.
+- **Liste des dates repositionnée** : elle recouvrait la boussole native de
+  Jakartowns en haut-gauche. Déplacée en bas du panorama, dans un bandeau
+  scrollable horizontal avec flèches (le retour utilisateur signalait que
+  l'historique peut être long — jusqu'à ~6 ans de reprises sur certaines
+  villes). Le badge de date séparé (redondant avec le chip en surbrillance
+  de la liste) est retiré ; la même liste sert maintenant aussi pour
+  afficher la date d'une image unique (un seul chip, pas de multipass).
+- **"Ouvrir dans Jakartowns" désactivé** tant qu'aucune image n'est chargée
+  (`disabled={!currentImageId}`).
+- **Préservation du point de vue au changement d'image** (nouveau
+  `src/runtime/lib/lookAt.ts`) : avant de changer d'image dans le fil des
+  dates, on calcule un point ~20m devant la vue actuelle (cap standard
+  dérivé du pan Jakartowns via une réflexion d'angle vérifiée
+  numériquement sur 2 cas Nord/Est), et une fois la nouvelle image chargée
+  (nouvelle position connue via l'événement `position` suivant), on
+  réoriente la caméra vers ce même point avec `setPan(...)`. Le calcul de
+  pan final réutilise tel quel `getAngleFromPoints` de `jakassets-viewer`
+  (déjà utilisée en prod pour orienter la caméra vers un point ciblé) plutôt
+  que d'être re-dérivé à la main, pour éviter une erreur de signe/convention.
+  **Non encore validé visuellement** — la théorie tient (vérifiée
+  numériquement pour la conversion d'angle), mais son effet réel dépendra
+  de l'écart de position entre images multipass et du fait que `state.pan`
+  ait déjà reçu au moins un événement `rotation` avant le changement
+  d'image (sinon, repli silencieux sur un simple changement d'image sans
+  réorientation).
+
 ## 2026-07-10 — Refonte UX : panneau flottant, mode pointage, multipass, date, persistance de la clé
 
 Demande utilisateur : rendre l'UI plus sobre/moderne, et ajouter plusieurs
