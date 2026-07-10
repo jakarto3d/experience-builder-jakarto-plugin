@@ -10,10 +10,6 @@ import { type ImmutableObject } from 'jimu-core'
  * indéfini, ce qui fait planter le panneau de réglages au chargement.
  */
 export interface Config {
-  /** true = affiche l'en-tête natif de Jakartowns dans le conteneur intégré. */
-  headerEnabled: boolean
-  /** true = affiche la mini-carte native de Jakartowns (inutile ici : la carte ArcGIS liée en tient déjà lieu). */
-  minimapEnabled: boolean
   /** Position de repli tant qu'aucun clic/extent n'a été reçu de la carte liée. */
   fallbackLatitude: number
   fallbackLongitude: number

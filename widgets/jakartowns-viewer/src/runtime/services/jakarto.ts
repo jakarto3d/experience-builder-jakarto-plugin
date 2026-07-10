@@ -17,17 +17,40 @@
  *   3. Chargement du script https://maps.jakarto.com/api/v1.js (autorisé par
  *      le cookie de session).
  *   4. Création du viewer via window.jakartowns.app.create_jakartowns(...).
+ *
+ * La clé API est aussi mise en cache dans localStorage (cf. `getStoredApiKey`
+ * / `storeApiKey`) : `checkAuthStatus` (l'ancienne façon de détecter une
+ * session déjà active) est bloqué par CORS sur `account.jakarto.com/auth`
+ * depuis la plupart des origines d'embarquement, donc on ne peut pas
+ * compter dessus pour éviter de redemander la clé à chaque rechargement.
  */
 
 const JAKARTO_LOGIN_URL = 'https://account.jakarto.com/users/trade-api-key'
-const JAKARTO_AUTH_CHECK_URL = 'https://account.jakarto.com/auth'
 const JAKARTO_LOGOUT_URL = 'https://account.jakarto.com/users/logout'
 const JAKARTOWNS_SCRIPT_URL = 'https://maps.jakarto.com/api/v1.js'
 const JAKARTOWNS_APP_URL = 'https://maps.jakarto.com/'
+const API_KEY_STORAGE_KEY = 'jakartowns-viewer:apiKey'
 
 export interface JakartoPosition {
   latitude: number
   longitude: number
+}
+
+export interface JakartoMultipassImage {
+  imageId: string
+  date: string | null
+}
+
+/** Snapshot de ce que le viewer affiche actuellement. */
+export interface JakartoViewState {
+  latitude: number | null
+  longitude: number | null
+  imageId: string | null
+  date: string | null
+  pan: number | null
+  tilt: number | null
+  fov: number | null
+  availableImages: JakartoMultipassImage[]
 }
 
 interface JakartownsViewer {
@@ -40,17 +63,28 @@ interface JakartownsViewer {
 }
 
 /**
- * Le viewer n'expose PAS de méthode `.on(...)` (contrairement à ce que
- * suggérait la documentation) : il dispatche ses événements de navigation
- * sur `window`, en `CustomEvent` avec le payload dans `detail`. Confirmé en
- * lisant le code réel d'une app Jakarto en production, qui écoute exactement
- * de cette façon. Attention : cet événement est global, pas scopé par
- * instance — deux widgets Jakartowns sur la même page recevraient les
- * événements l'un de l'autre (limitation de la librairie, pas de notre côté).
+ * Le viewer n'expose PAS de méthode `.on(...)` : il dispatche ses événements
+ * de navigation sur `window`, en `CustomEvent`. Confirmé en lisant le code
+ * réel d'une app Jakarto en production, qui écoute exactement de cette
+ * façon. Attention : ces événements sont globaux, pas scopés par instance —
+ * deux widgets Jakartowns sur la même page recevraient les événements l'un
+ * de l'autre (limitation de la librairie, pas de notre côté).
  */
 interface JakartownsPositionEventDetail {
   latitude: number
   longitude: number
+  currentSphereInfo?: {
+    properties?: {
+      image_id?: string
+      date?: string
+    }
+  }
+  multipassAtLocation?: Array<{
+    properties: {
+      image_id: string
+      date?: string
+    }
+  }>
 }
 
 interface JakartownsApi {
@@ -70,31 +104,38 @@ declare global {
 }
 
 /**
- * Vérifie si le cookie de session Jakarto en cours est encore valide.
- *
- * Peut échouer par CORS selon le domaine d'où tourne le widget (l'origine
- * n'est pas forcément autorisée par account.jakarto.com) : c'est un mode
- * d'échec attendu, pas une erreur de notre code — on se contente alors
- * d'afficher le formulaire de connexion, d'où le niveau `info` plutôt que
- * `error`.
+ * Récupère la clé API Jakarto mise en cache localement, si l'utilisateur
+ * s'est déjà connecté avec succès sur ce navigateur.
  */
-export async function checkAuthStatus(): Promise<boolean> {
+export function getStoredApiKey(): string | null {
   try {
-    const response = await fetch(JAKARTO_AUTH_CHECK_URL, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      mode: 'cors'
-    })
-    return response.ok
-  } catch (error) {
-    console.info('[Jakarto] Statut d\'authentification indisponible (CORS ou réseau) — affichage du formulaire de connexion.', error)
-    return false
+    return window.localStorage.getItem(API_KEY_STORAGE_KEY)
+  } catch {
+    // localStorage indisponible (navigation privée stricte, iframe sandboxée…) : tant pis, on redemandera la clé.
+    return null
+  }
+}
+
+function storeApiKey(apiKey: string): void {
+  try {
+    window.localStorage.setItem(API_KEY_STORAGE_KEY, apiKey)
+  } catch {
+    // idem : pas bloquant, juste moins pratique pour l'utilisateur.
+  }
+}
+
+function clearStoredApiKey(): void {
+  try {
+    window.localStorage.removeItem(API_KEY_STORAGE_KEY)
+  } catch {
+    // idem.
   }
 }
 
 /**
- * Échange une clé API Jakarto contre un cookie de session.
+ * Échange une clé API Jakarto contre un cookie de session, et la met en
+ * cache localement en cas de succès pour éviter de la redemander au
+ * prochain chargement du widget.
  */
 export async function authenticate(apiKey: string): Promise<boolean> {
   try {
@@ -105,6 +146,9 @@ export async function authenticate(apiKey: string): Promise<boolean> {
       mode: 'cors',
       body: JSON.stringify({ apiKey })
     })
+    if (response.ok) {
+      storeApiKey(apiKey)
+    }
     return response.ok
   } catch (error) {
     console.error('[Jakarto] Authentification échouée :', error)
@@ -113,9 +157,10 @@ export async function authenticate(apiKey: string): Promise<boolean> {
 }
 
 /**
- * Invalide le cookie de session Jakarto en cours.
+ * Invalide le cookie de session Jakarto en cours et oublie la clé mise en cache.
  */
 export async function logout(): Promise<boolean> {
+  clearStoredApiKey()
   try {
     const response = await fetch(JAKARTO_LOGOUT_URL, {
       method: 'POST',
@@ -144,25 +189,26 @@ function loadJakartownsScript(): Promise<void> {
 }
 
 export interface InitializeViewerOptions {
-  headerEnabled?: boolean
-  minimapEnabled?: boolean
   latitude?: number
   longitude?: number
-  /** Appelé quand l'utilisateur navigue dans le panorama (événement `position`). */
-  onNavigate?: (position: JakartoPosition) => void
+  /** Appelé à chaque changement de position/image (événement `position`). */
+  onViewChange?: (state: JakartoViewState) => void
 }
 
 export interface JakartoViewerHandle {
   /** Déplace la vue panoramique — utilisé pour la synchronisation carte → Jakartowns. */
   setPosition: (position: JakartoPosition) => void
+  /** Affiche une image précise parmi celles disponibles au même endroit (multipass). */
+  setImage: (imageId: string) => void
+  /** Snapshot synchrone de l'état actuel (position, image, orientation) — utilisé au clic sur "Ouvrir dans Jakartowns". */
+  getViewState: () => JakartoViewState
   /** Arrête de propager les événements du viewer (à appeler au démontage du widget). */
   destroy: () => void
 }
 
 /**
  * Initialise le viewer Jakartowns dans un conteneur DOM.
- * Doit être appelé seulement après une authentification réussie
- * (`authenticate` ou `checkAuthStatus` ayant renvoyé `true`).
+ * Doit être appelé seulement après une authentification réussie.
  *
  * @returns `null` si le script/l'API Jakartowns n'a pas pu être chargé.
  */
@@ -187,18 +233,63 @@ export async function initializeViewer(
     api.app.create_jakartowns(
       `#${container.id}`,
       {
-        headerEnabled: options.headerEnabled ?? true,
-        minimapEnabled: options.minimapEnabled ?? false
+        // On cache l'en-tête natif de Jakartowns (logo/recherche/aide) — le
+        // widget affiche sa propre bannière "Jakartowns" et sa propre carte
+        // ArcGIS fait déjà office de mini-carte. La boussole reste utile
+        // pour s'orienter dans le panorama.
+        headerEnabled: false,
+        minimapEnabled: false,
+        compassEnabled: true
       },
       (viewer) => {
         let destroyed = false
 
+        const state: JakartoViewState = {
+          latitude: options.latitude ?? null,
+          longitude: options.longitude ?? null,
+          imageId: null,
+          date: null,
+          pan: null,
+          tilt: null,
+          fov: null,
+          availableImages: []
+        }
+
         const onPositionEvent = (event: Event) => {
           if (destroyed) return
-          const { latitude, longitude } = (event as CustomEvent<JakartownsPositionEventDetail>).detail
-          options.onNavigate?.({ latitude, longitude })
+          const detail = (event as CustomEvent<JakartownsPositionEventDetail>).detail
+          state.latitude = detail.latitude
+          state.longitude = detail.longitude
+          state.imageId = detail.currentSphereInfo?.properties?.image_id ?? null
+          state.date = detail.currentSphereInfo?.properties?.date ?? null
+          state.availableImages = (detail.multipassAtLocation ?? []).map((entry) => ({
+            imageId: entry.properties.image_id,
+            date: entry.properties.date ?? null
+          }))
+          options.onViewChange?.({ ...state })
         }
         window.addEventListener('position', onPositionEvent)
+
+        // pan/tilt/fov ne sont utiles qu'au moment de construire l'URL "Ouvrir
+        // dans Jakartowns" (via getViewState()) : on les garde en interne
+        // sans déclencher de callback React à chaque micro-rotation.
+        const onRotationEvent = (event: Event) => {
+          if (destroyed) return
+          state.pan = (event as CustomEvent<number>).detail
+        }
+        window.addEventListener('rotation', onRotationEvent)
+
+        const onTiltEvent = (event: Event) => {
+          if (destroyed) return
+          state.tilt = (event as CustomEvent<number>).detail
+        }
+        window.addEventListener('tilt', onTiltEvent)
+
+        const onFovEvent = (event: Event) => {
+          if (destroyed) return
+          state.fov = (event as CustomEvent<number>).detail
+        }
+        window.addEventListener('fov', onFovEvent)
 
         if (options.latitude != null && options.longitude != null) {
           viewer.setPosition({ latitude: options.latitude, longitude: options.longitude })
@@ -228,10 +319,18 @@ export async function initializeViewer(
             }
             viewer.setPosition({ latitude: lat, longitude: lng })
           },
+          setImage: (imageId) => {
+            if (destroyed) return
+            viewer.setImage(imageId)
+          },
+          getViewState: () => ({ ...state }),
           destroy: () => {
             destroyed = true
             resizeObserver.disconnect()
             window.removeEventListener('position', onPositionEvent)
+            window.removeEventListener('rotation', onRotationEvent)
+            window.removeEventListener('tilt', onTiltEvent)
+            window.removeEventListener('fov', onFovEvent)
           }
         })
       }
@@ -240,28 +339,34 @@ export async function initializeViewer(
 }
 
 export interface JakartownsUrlOptions {
+  /** Identifiant technique de l'image à ouvrir — priorisé sur lat/lng quand disponible pour pointer exactement la même capture. */
+  uid?: string | null
   /** Rotation horizontale (0 = Nord, π/2 = Ouest, π = Sud). */
-  pan?: number
+  pan?: number | null
   /** Inclinaison verticale (0 = horizontal, ±π/2 = zénith/nadir). */
-  tilt?: number
+  tilt?: number | null
   /** Champ de vision, de 10 à 100 (défaut 100). */
-  fov?: number
+  fov?: number | null
   /** Année des données cartographiques à afficher, si plusieurs sont disponibles. */
   year?: number
 }
 
 /**
- * Construit une URL Jakartowns (API URL, cf. docs/research-jakartowns-api.md
- * §6) pointant sur une position donnée. Contrairement à l'intégration API JS
- * ci-dessus, cette URL s'ouvre dans un onglet séparé sur maps.jakarto.com :
- * elle ne dépend donc pas du cookie de session partitionné du widget, et
- * fonctionne même si l'utilisateur n'est pas connecté dans le widget (il lui
- * sera demandé de se connecter sur maps.jakarto.com si nécessaire).
+ * Construit une URL Jakartowns (API URL) pointant sur une position ou,
+ * idéalement, sur une image précise (`uid`) — c'est ce que fait une app
+ * Jakarto en production pour son bouton "Ouvrir dans Jakartowns" : elle
+ * privilégie `uid` (+ pan/tilt/fov) plutôt que lat/lng dès qu'une image est
+ * chargée, pour rouvrir exactement la même capture plutôt qu'une image
+ * proche mais différente.
  */
 export function buildJakartownsUrl(position: JakartoPosition, options: JakartownsUrlOptions = {}): string {
   const params = new URLSearchParams()
-  params.set('lat', String(position.latitude))
-  params.set('lng', String(position.longitude))
+  if (options.uid) {
+    params.set('uid', options.uid)
+  } else {
+    params.set('lat', String(position.latitude))
+    params.set('lng', String(position.longitude))
+  }
   if (options.pan != null) params.set('pan', String(options.pan))
   if (options.tilt != null) params.set('tilt', String(options.tilt))
   if (options.fov != null) params.set('fov', String(options.fov))
