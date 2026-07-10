@@ -2,6 +2,44 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Le canvas Jakartowns reste à 0x0 : Jakartowns dépend du resize de `window`
+
+Après le fix du panneau de réglages, le widget se connecte, s'authentifie et
+charge bien les tuiles Jakartowns (confirmé par le Network : `extents`,
+`tileset.json`, `.webp`, `spheres` tous en 200). Mais rien ne s'affichait
+visuellement. Diagnostic avec l'utilisateur (DevTools) : un `<canvas>` est
+bien créé par Jakartowns dans notre conteneur, mais avec des attributs
+`width="0" height="0"` — le canvas existe mais son buffer de rendu est vide.
+
+En creusant le code d'une vraie app Jakarto en prod (référence indiquée par
+l'utilisateur, non listée ici), trouvé la preuve dans son store
+`userInterface.js` : à chaque changement de taille du panneau contenant le
+viewer (ex. agrandir/réduire le panneau de détail), l'app force explicitement :
+```js
+nextTick(() => {
+  const resizeEvent = new Event('resize')
+  window.dispatchEvent(resizeEvent)
+})
+```
+Ça confirme le mécanisme réel : **Jakartowns ne redimensionne son canvas
+qu'en réaction à l'événement `resize` de `window`**, pas via un
+`ResizeObserver` sur son propre conteneur. Un widget monté par React dans
+Experience Builder ne déclenche jamais de vrai resize de fenêtre — le canvas
+reste donc bloqué à sa taille de création.
+
+**Fix** dans `services/jakarto.ts` (`initializeViewer`) :
+- Un `requestAnimationFrame(() => window.dispatchEvent(new Event('resize')))`
+  juste après la création du viewer, pour forcer une première mesure une
+  fois le DOM/layout stabilisé.
+- Un `ResizeObserver` sur le conteneur qui redéclenche le même événement à
+  chaque changement de taille réel (ex. redimensionnement du widget dans le
+  builder), avec `disconnect()` dans `destroy()`.
+
+Synchronisé directement dans l'installation Developer Edition de
+l'utilisateur (pas besoin de redémarrer `npm start` pour ce fichier — contrairement
+à `config.json`/`manifest.json`, les `.ts` sont repris à chaud par le serveur
+de dev). À valider par l'utilisateur.
+
 ## 2026-07-10 — Premiers tests en environnement réel : deux bugs corrigés
 
 L'utilisateur a maintenant accès à une vraie Developer Edition ArcGIS

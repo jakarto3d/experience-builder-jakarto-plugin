@@ -183,6 +183,19 @@ export async function initializeViewer(
           viewer.setPosition({ latitude: options.latitude, longitude: options.longitude })
         }
 
+        // Jakartowns ne redimensionne son canvas qu'en réaction à l'événement
+        // `resize` de `window` (pas de ResizeObserver sur son propre conteneur) —
+        // confirmé en observant que l'app jakassets-viewer force un
+        // `window.dispatchEvent(new Event('resize'))` à chaque changement de
+        // taille de son panneau contenant le viewer. Un conteneur monté par
+        // React ne déclenche jamais de vrai resize de fenêtre : sans ce coup de
+        // pouce, le canvas reste bloqué à sa taille de création (souvent 0x0).
+        const dispatchResize = () => window.dispatchEvent(new Event('resize'))
+        requestAnimationFrame(dispatchResize)
+
+        const resizeObserver = new ResizeObserver(() => dispatchResize())
+        resizeObserver.observe(container)
+
         resolve({
           setPosition: (position) => {
             if (destroyed) return
@@ -196,6 +209,7 @@ export async function initializeViewer(
           },
           destroy: () => {
             destroyed = true
+            resizeObserver.disconnect()
           }
         })
       }
