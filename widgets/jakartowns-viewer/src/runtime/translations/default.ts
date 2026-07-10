@@ -14,5 +14,7 @@ export default {
   unfoldPanel: 'Déplier',
   pickingModeLabel: 'Cliquer sur la carte',
   pickingModeHint: 'Cliquez ici puis sur la carte pour localiser le panorama (ou faites un clic droit sur la carte à tout moment).',
-  multipassUnknownDate: 'Date inconnue'
+  multipassUnknownDate: 'Date inconnue',
+  timelineScrollPrevious: 'Dates précédentes',
+  timelineScrollNext: 'Dates suivantes'
 }

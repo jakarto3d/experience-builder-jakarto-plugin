@@ -11,9 +11,16 @@ import {
   type JakartoViewerHandle,
   type JakartoMultipassImage
 } from './services/jakarto'
+import { projectPoint, reflectAngle, getJakartownsPanTowards, LOOK_AHEAD_DISTANCE_METERS, type LatLng } from './lib/lookAt'
 import { useSpatialSync } from './hooks/useSpatialSync'
 import defaultMessages from './translations/default'
 import './widget.css'
+
+const DEFAULT_PANEL_WIDTH = 380
+const DEFAULT_PANORAMA_HEIGHT = 320
+const MIN_PANEL_WIDTH = 260
+const MIN_PANORAMA_HEIGHT = 180
+const TIMELINE_SCROLL_STEP = 160
 
 interface DragState {
   pointerId: number
@@ -25,9 +32,24 @@ interface DragState {
   maxTop: number
 }
 
+interface ResizeState {
+  pointerId: number
+  startClientX: number
+  startClientY: number
+  startWidth: number
+  startHeight: number
+  maxWidth: number
+  maxHeight: number
+}
+
 interface PanelPosition {
   left: number
   top: number
+}
+
+interface PanelSize {
+  width: number
+  height: number
 }
 
 const IconChevron = ({ folded }: { folded: boolean }) => (
@@ -75,9 +97,9 @@ function formatJakartoDate(dateString: string | null): string | null {
  * Widget "Jakartowns Viewer".
  *
  * Se lie au widget Map choisi dans les réglages (useMapWidgetIds) et affiche
- * le panorama Jakartowns dans un panneau flottant, repliable et déplaçable
- * (dans les limites du widget). Deux façons de pointer un endroit sur la
- * carte liée :
+ * le panorama Jakartowns dans un panneau flottant, repliable, déplaçable et
+ * redimensionnable (dans les limites du widget). Deux façons de pointer un
+ * endroit sur la carte liée :
  *   - mode "pointage" armé via le bouton dédié : le prochain clic gauche
  *     localise puis se désarme automatiquement (usage ponctuel)
  *   - clic droit sur la carte : toujours actif, sans devoir armer quoi que
@@ -91,7 +113,9 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const widgetRootRef = React.useRef<HTMLDivElement>(null)
   const panelRef = React.useRef<HTMLDivElement>(null)
   const dragStateRef = React.useRef<DragState | null>(null)
+  const resizeStateRef = React.useRef<ResizeState | null>(null)
   const [panelPosition, setPanelPosition] = React.useState<PanelPosition | null>(null)
+  const [panelSize, setPanelSize] = React.useState<PanelSize>({ width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANORAMA_HEIGHT })
   const [isPanelFolded, setIsPanelFolded] = React.useState(false)
 
   const [jimuMapView, setJimuMapView] = React.useState<JimuMapView>(null)
@@ -104,6 +128,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const viewerContainerRef = React.useRef<HTMLDivElement>(null)
   const viewerHandleRef = React.useRef<JakartoViewerHandle>(null)
+  const timelineListRef = React.useRef<HTMLDivElement>(null)
+  // Point visé calculé avant un changement d'image multipass, consommé au
+  // prochain événement `position` (celui déclenché par ce changement) pour
+  // réorienter la caméra vers le même repère visuel. Cf. src/runtime/lib/lookAt.ts.
+  const pendingLookAtTargetRef = React.useRef<LatLng | null>(null)
 
   // Dernière position connue (clic carte ou navigation Jakartowns), utilisée
   // en repli pour le bouton "Ouvrir dans Jakartowns" tant qu'aucune image
@@ -166,7 +195,27 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   }
 
   const handleSelectImage = (imageId: string) => {
-    viewerHandleRef.current?.setImage(imageId)
+    const handle = viewerHandleRef.current
+    if (!handle) return
+
+    // Avant de changer d'image, on retient un point ~20m devant la vue
+    // actuelle : les images "au même endroit" ne sont pas forcément captées
+    // exactement à la même position (voie différente, quelques mètres
+    // d'écart), donc on essaie de garder le même repère visuel plutôt que de
+    // juste réinitialiser l'orientation.
+    const viewState = handle.getViewState()
+    if (viewState.latitude != null && viewState.longitude != null && viewState.pan != null) {
+      const currentBearing = reflectAngle(viewState.pan)
+      pendingLookAtTargetRef.current = projectPoint(
+        { lat: viewState.latitude, lng: viewState.longitude },
+        currentBearing,
+        LOOK_AHEAD_DISTANCE_METERS
+      )
+    } else {
+      pendingLookAtTargetRef.current = null
+    }
+
+    handle.setImage(imageId)
   }
 
   const handleOpenInJakartowns = () => {
@@ -202,6 +251,13 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             const activeView = jimuMapViewRef.current?.view
             activeView?.goTo({ center: [p.longitude, p.latitude] }, { duration: 600 })
           })
+
+          const pendingTarget = pendingLookAtTargetRef.current
+          if (pendingTarget) {
+            pendingLookAtTargetRef.current = null
+            const newPan = getJakartownsPanTowards(position, pendingTarget)
+            viewerHandleRef.current?.setPan(newPan)
+          }
         }
         setCurrentDate(state.date)
         setCurrentImageId(state.imageId)
@@ -294,7 +350,54 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     }
   }
 
-  const formattedCurrentDate = formatJakartoDate(currentDate)
+  const handleResizeHandlePointerDown = (event: React.PointerEvent) => {
+    const panel = panelRef.current
+    const root = widgetRootRef.current
+    if (!panel || !root) return
+    event.stopPropagation()
+    event.currentTarget.setPointerCapture(event.pointerId)
+    const panelRect = panel.getBoundingClientRect()
+    const rootRect = root.getBoundingClientRect()
+    resizeStateRef.current = {
+      pointerId: event.pointerId,
+      startClientX: event.clientX,
+      startClientY: event.clientY,
+      startWidth: panelSize.width,
+      startHeight: panelSize.height,
+      maxWidth: Math.max(MIN_PANEL_WIDTH, rootRect.right - panelRect.left),
+      maxHeight: Math.max(MIN_PANORAMA_HEIGHT, rootRect.bottom - panelRect.top)
+    }
+  }
+
+  const handleResizeHandlePointerMove = (event: React.PointerEvent) => {
+    const resize = resizeStateRef.current
+    if (!resize || event.pointerId !== resize.pointerId) return
+    const dx = event.clientX - resize.startClientX
+    const dy = event.clientY - resize.startClientY
+    setPanelSize({
+      width: Math.min(Math.max(MIN_PANEL_WIDTH, resize.startWidth + dx), resize.maxWidth),
+      height: Math.min(Math.max(MIN_PANORAMA_HEIGHT, resize.startHeight + dy), resize.maxHeight)
+    })
+  }
+
+  const handleResizeHandlePointerUp = (event: React.PointerEvent) => {
+    if (resizeStateRef.current?.pointerId === event.pointerId) {
+      resizeStateRef.current = null
+    }
+  }
+
+  const scrollTimeline = (direction: number) => {
+    timelineListRef.current?.scrollBy({ left: direction * TIMELINE_SCROLL_STEP, behavior: 'smooth' })
+  }
+
+  // Toujours au moins l'image courante (même sans multipass), pour que la
+  // date reste visible dans tous les cas — pas seulement quand plusieurs
+  // captures existent au même endroit.
+  const timelineEntries: JakartoMultipassImage[] = availableImages.length > 0
+    ? availableImages
+    : currentImageId != null
+      ? [{ imageId: currentImageId, date: currentDate }]
+      : []
 
   return (
     <div className="jakartowns-viewer-widget jimu-widget" ref={widgetRootRef}>
@@ -321,7 +424,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
         <div
           className="jakartowns-viewer-panel"
           ref={panelRef}
-          style={panelPosition ? { left: panelPosition.left, top: panelPosition.top } : undefined}
+          style={{
+            width: panelSize.width,
+            ...(panelPosition ? { left: panelPosition.left, top: panelPosition.top } : {})
+          }}
         >
           <div
             className="jakartowns-viewer-panel-titlebar"
@@ -370,6 +476,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                   className="jakartowns-viewer-toolbar-btn"
                   title={defaultMessages.openInJakartownsLink}
                   onClick={handleOpenInJakartowns}
+                  disabled={!currentImageId}
                 >
                   <IconExternalLink />
                   {defaultMessages.openInJakartownsLink}
@@ -409,31 +516,56 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
               )}
 
               {isAuthenticated && (
-                <div className="jakartowns-viewer-panorama-area">
-                  {availableImages.length > 1 && (
-                    <div className="jakartowns-viewer-multipass-list">
-                      {availableImages.map((image) => (
-                        <button
-                          key={image.imageId}
-                          type="button"
-                          className={
-                            'jakartowns-viewer-multipass-chip' +
-                            (image.imageId === currentImageId ? ' is-selected' : '')
-                          }
-                          onClick={() => handleSelectImage(image.imageId)}
-                        >
-                          {formatJakartoDate(image.date) ?? defaultMessages.multipassUnknownDate}
-                        </button>
-                      ))}
+                <div className="jakartowns-viewer-panorama-area" style={{ height: panelSize.height }}>
+                  <div ref={viewerContainerRef} className="jakartowns-viewer-panorama" />
+
+                  {timelineEntries.length > 0 && (
+                    <div className="jakartowns-viewer-timeline">
+                      <button
+                        type="button"
+                        className="jakartowns-viewer-timeline-arrow"
+                        aria-label={defaultMessages.timelineScrollPrevious}
+                        onClick={() => scrollTimeline(-1)}
+                      >
+                        ‹
+                      </button>
+                      <div className="jakartowns-viewer-timeline-list" ref={timelineListRef}>
+                        {timelineEntries.map((image) => (
+                          <button
+                            key={image.imageId}
+                            type="button"
+                            className={
+                              'jakartowns-viewer-multipass-chip' +
+                              (image.imageId === currentImageId ? ' is-selected' : '')
+                            }
+                            onClick={() => handleSelectImage(image.imageId)}
+                          >
+                            {formatJakartoDate(image.date) ?? defaultMessages.multipassUnknownDate}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="jakartowns-viewer-timeline-arrow"
+                        aria-label={defaultMessages.timelineScrollNext}
+                        onClick={() => scrollTimeline(1)}
+                      >
+                        ›
+                      </button>
                     </div>
                   )}
-                  {formattedCurrentDate && (
-                    <div className="jakartowns-viewer-date-badge">{formattedCurrentDate}</div>
-                  )}
-                  <div ref={viewerContainerRef} className="jakartowns-viewer-panorama" />
                 </div>
               )}
             </div>
+          )}
+
+          {!isPanelFolded && (
+            <div
+              className="jakartowns-viewer-resize-handle"
+              onPointerDown={handleResizeHandlePointerDown}
+              onPointerMove={handleResizeHandlePointerMove}
+              onPointerUp={handleResizeHandlePointerUp}
+            />
           )}
         </div>
       )}

@@ -5,6 +5,14 @@
   position: relative;
   overflow: hidden;
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /*
+   * Le widget occupe tout son emplacement dans la mise en page (souvent
+   * bien plus grand que le panneau flottant lui-même, pour lui laisser de
+   * la place où se déplacer). Sans ça, ce conteneur entièrement transparent
+   * intercepterait quand même les clics destinés à la carte en-dessous sur
+   * toute sa surface. Seul le panneau (voir plus bas) redevient interactif.
+   */
+  pointer-events: none;
 }
 
 .jakartowns-viewer-placeholder {
@@ -17,6 +25,7 @@
   padding: 1rem;
   color: var(--ref-palette-neutral-800, #444);
   font-size: 0.9rem;
+  pointer-events: auto;
 }
 
 /* ─── Panneau flottant ──────────────────────────────────────────────── */
@@ -25,7 +34,7 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  width: min(380px, calc(100% - 24px));
+  max-width: calc(100% - 24px);
   max-height: calc(100% - 24px);
   display: flex;
   flex-direction: column;
@@ -34,6 +43,7 @@
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2), 0 1px 2px rgba(15, 23, 42, 0.08);
   overflow: hidden;
   z-index: 20;
+  pointer-events: auto;
 }
 
 .jakartowns-viewer-panel-titlebar {
@@ -121,6 +131,14 @@
   color: #fff;
 }
 
+.jakartowns-viewer-toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #0f172a;
+}
+
 /* ─── Connexion ─────────────────────────────────────────────────────── */
 
 .jakartowns-viewer-login {
@@ -191,7 +209,6 @@
 .jakartowns-viewer-panorama-area {
   position: relative;
   width: 100%;
-  height: 320px;
 }
 
 .jakartowns-viewer-panorama {
@@ -215,32 +232,57 @@
   display: flex;
 }
 
-.jakartowns-viewer-date-badge {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  z-index: 5;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: rgba(15, 23, 42, 0.72);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 600;
-  pointer-events: none;
-}
+/* ─── Fil des dates (multipass) ────────────────────────────────────── */
 
-.jakartowns-viewer-multipass-list {
+.jakartowns-viewer-timeline {
   position: absolute;
-  left: 8px;
-  top: 8px;
+  left: 0;
+  right: 0;
+  bottom: 0;
   z-index: 5;
   display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px;
+  background: linear-gradient(to top, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0));
+}
+
+.jakartowns-viewer-timeline-arrow {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.55);
+  color: #fff;
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.jakartowns-viewer-timeline-arrow:hover {
+  background: rgba(15, 23, 42, 0.8);
+}
+
+.jakartowns-viewer-timeline-list {
+  flex: 1;
+  min-width: 0;
+  display: flex;
   gap: 4px;
-  flex-wrap: wrap;
-  max-width: calc(100% - 16px);
+  overflow-x: auto;
+  scroll-behavior: smooth;
+  scrollbar-width: none;
+}
+
+.jakartowns-viewer-timeline-list::-webkit-scrollbar {
+  display: none;
 }
 
 .jakartowns-viewer-multipass-chip {
+  flex-shrink: 0;
   padding: 3px 8px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
@@ -249,6 +291,7 @@
   font-size: 0.68rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .jakartowns-viewer-multipass-chip:hover {
@@ -258,4 +301,28 @@
 .jakartowns-viewer-multipass-chip.is-selected {
   background: #2f6fed;
   border-color: #2f6fed;
+}
+
+/* ─── Poignée de redimensionnement ──────────────────────────────────── */
+
+.jakartowns-viewer-resize-handle {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  touch-action: none;
+  z-index: 25;
+}
+
+.jakartowns-viewer-resize-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid #94a3b8;
+  border-bottom: 2px solid #94a3b8;
 }

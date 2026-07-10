@@ -200,6 +200,8 @@ export interface JakartoViewerHandle {
   setPosition: (position: JakartoPosition) => void
   /** Affiche une image précise parmi celles disponibles au même endroit (multipass). */
   setImage: (imageId: string) => void
+  /** Change l'orientation horizontale (radians, convention Jakartowns — voir buildJakartownsUrl). */
+  setPan: (value: number) => void
   /** Snapshot synchrone de l'état actuel (position, image, orientation) — utilisé au clic sur "Ouvrir dans Jakartowns". */
   getViewState: () => JakartoViewState
   /** Arrête de propager les événements du viewer (à appeler au démontage du widget). */
@@ -322,6 +324,10 @@ export async function initializeViewer(
           setImage: (imageId) => {
             if (destroyed) return
             viewer.setImage(imageId)
+          },
+          setPan: (value) => {
+            if (destroyed) return
+            viewer.setPan(value)
           },
           getViewState: () => ({ ...state }),
           destroy: () => {
