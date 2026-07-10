@@ -2,6 +2,66 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Deux bugs de plus trouvés via la Console : `.on()` inexistant + collision d'id `#app`
+
+En regardant la Console (pas seulement Network) après le fix précédent,
+l'utilisateur a trouvé l'erreur bloquante qui expliquait tout depuis le
+début :
+
+```
+Uncaught TypeError: viewer.on is not a function
+  at jakarto.ts:177:16
+```
+
+Notre code appelait `viewer.on('position', ...)` juste après la création du
+viewer. Cette méthode n'existe pas sur l'instance réelle — l'erreur est levée
+en synchrone dans le callback de `create_jakartowns`, donc **tout ce qui suit
+dans ce callback ne s'exécutait jamais** : ni notre `viewer.setPosition(...)`
+initial, ni le dispatch de resize ajouté juste avant, ni le `resolve()` de la
+promesse (`initializeViewer` ne se terminait donc jamais). Ça explique
+pourquoi le fix resize précédent n'avait aucun effet observable : il ne
+s'exécutait tout simplement pas.
+
+En recroisant avec le code réel de `jakassets-viewer` (déjà consulté plus
+haut), confirmé que la navigation dans le panorama est en fait notifiée via
+un événement global sur `window`, pas une méthode sur l'instance :
+```js
+window.addEventListener('position', (e) => { /* e.detail.latitude, e.detail.longitude */ })
+```
+**Fix** dans `services/jakarto.ts` : remplacé `viewer.on('position', ...)`
+par `window.addEventListener('position', ...)`, avec retrait de l'écouteur
+dans `destroy()`. Limitation à noter : cet événement est global (pas scopé
+par instance) — deux widgets Jakartowns simultanés sur la même page
+recevraient les événements l'un de l'autre. C'est une limitation de la
+librairie Jakartowns elle-même, pas quelque chose qu'on peut corriger côté
+widget.
+
+Deuxième bug trouvé en parallèle (piste CSS explorée manuellement par
+l'utilisateur dans DevTools, "en jouant avec le CSS j'ai réussi à afficher
+qqch") : une règle CSS globale `#app { ...; display: none; }` cachait le
+panorama. Cause : Jakartowns monte sa propre appli interne dans une div avec
+`id="app"` codé en dur par sa librairie, imbriquée dans notre conteneur.
+Experience Builder a probablement sa propre racine `id="app"` ailleurs sur
+la page, et une règle qui lui est destinée (probablement pour éviter un
+flash avant hydratation) retombe aussi sur la div interne de Jakartowns à
+cause de la collision d'id (les sélecteurs CSS par id ciblent tout élément
+portant cet id, peu importe l'imbrication). **Fix** : règle plus spécifique
+`.jakartowns-viewer-panorama #app { display: flex; }` dans `widget.css`,
+qui neutralise le `display:none` uniquement pour l'instance imbriquée, sans
+toucher à la vraie racine d'Experience Builder.
+
+Corrigé au passage : le `console.error` de `checkAuthStatus()` passé en
+`console.info`, puisque l'échec CORS observé sur `account.jakarto.com/auth`
+(origine `localhost:3001` non autorisée) est un mode d'échec attendu — il ne
+bloque que la détection automatique "déjà connecté", pas la connexion
+manuelle par clé API qui elle passe par un autre endpoint.
+
+Bruit sans rapport observé dans la Console, propre à l'environnement local
+de l'utilisateur (pas d'action de notre côté) : erreur SSL sur le service
+worker d'Experience Builder (certificat auto-signé du serveur de dev) et
+tuiles Hillshade 404 (couche de base du web map de démo utilisé pour les
+tests).
+
 ## 2026-07-10 — Le canvas Jakartowns reste à 0x0 : Jakartowns dépend du resize de `window`
 
 Après le fix du panneau de réglages, le widget se connecte, s'authentifie et

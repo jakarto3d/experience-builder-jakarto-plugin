@@ -37,7 +37,20 @@ interface JakartownsViewer {
   setFov: (value: number) => void
   setImage: (uid: string) => void
   setMarkers: (geojson: unknown) => void
-  on: (event: 'position' | 'rotation' | 'tilt' | 'fov', handler: (payload: any) => void) => void
+}
+
+/**
+ * Le viewer n'expose PAS de méthode `.on(...)` (contrairement à ce que
+ * suggérait la documentation) : il dispatche ses événements de navigation
+ * sur `window`, en `CustomEvent` avec le payload dans `detail`. Confirmé en
+ * lisant le code réel d'une app Jakarto en production, qui écoute exactement
+ * de cette façon. Attention : cet événement est global, pas scopé par
+ * instance — deux widgets Jakartowns sur la même page recevraient les
+ * événements l'un de l'autre (limitation de la librairie, pas de notre côté).
+ */
+interface JakartownsPositionEventDetail {
+  latitude: number
+  longitude: number
 }
 
 interface JakartownsApi {
@@ -58,6 +71,12 @@ declare global {
 
 /**
  * Vérifie si le cookie de session Jakarto en cours est encore valide.
+ *
+ * Peut échouer par CORS selon le domaine d'où tourne le widget (l'origine
+ * n'est pas forcément autorisée par account.jakarto.com) : c'est un mode
+ * d'échec attendu, pas une erreur de notre code — on se contente alors
+ * d'afficher le formulaire de connexion, d'où le niveau `info` plutôt que
+ * `error`.
  */
 export async function checkAuthStatus(): Promise<boolean> {
   try {
@@ -69,7 +88,7 @@ export async function checkAuthStatus(): Promise<boolean> {
     })
     return response.ok
   } catch (error) {
-    console.error('[Jakarto] Vérification du statut d\'authentification échouée :', error)
+    console.info('[Jakarto] Statut d\'authentification indisponible (CORS ou réseau) — affichage du formulaire de connexion.', error)
     return false
   }
 }
@@ -174,10 +193,12 @@ export async function initializeViewer(
       (viewer) => {
         let destroyed = false
 
-        viewer.on('position', ({ latitude, longitude }) => {
+        const onPositionEvent = (event: Event) => {
           if (destroyed) return
+          const { latitude, longitude } = (event as CustomEvent<JakartownsPositionEventDetail>).detail
           options.onNavigate?.({ latitude, longitude })
-        })
+        }
+        window.addEventListener('position', onPositionEvent)
 
         if (options.latitude != null && options.longitude != null) {
           viewer.setPosition({ latitude: options.latitude, longitude: options.longitude })
@@ -210,6 +231,7 @@ export async function initializeViewer(
           destroy: () => {
             destroyed = true
             resizeObserver.disconnect()
+            window.removeEventListener('position', onPositionEvent)
           }
         })
       }

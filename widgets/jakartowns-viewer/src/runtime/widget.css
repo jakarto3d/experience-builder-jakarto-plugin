@@ -103,6 +103,21 @@
   min-height: 0;
 }
 
+/*
+ * Jakartowns monte sa propre appli interne dans une div avec id="app",
+ * codé en dur par sa librairie, imbriquée dans notre conteneur. Experience
+ * Builder a sa propre racine id="app" ailleurs sur la page, et une règle
+ * CSS globale la cible avec `display: none` (probablement pour éviter un
+ * flash avant hydratation). Les sélecteurs d'ID s'appliquant à TOUT élément
+ * portant cet id, cette règle retombe aussi sur la div interne de
+ * Jakartowns et la cache. On la neutralise ici avec un sélecteur plus
+ * spécifique (classe + id), sans toucher à la vraie racine d'Experience
+ * Builder.
+ */
+.jakartowns-viewer-panorama #app {
+  display: flex;
+}
+
 .jakartowns-viewer-logout-btn {
   position: absolute;
   top: 0.5rem;
