@@ -18,6 +18,19 @@
   font-size: 0.9rem;
 }
 
+.jakartowns-viewer-toolbar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.jakartowns-viewer-open-url-link {
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
 .jakartowns-viewer-login {
   flex: 1;
   display: flex;

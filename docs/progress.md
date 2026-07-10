@@ -2,6 +2,25 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Ouverture via l'API URL (fallback indépendant de l'auth JS API)
+
+- Demande utilisateur : avoir un moyen d'ouvrir Jakartowns via l'**API URL**
+  (`https://maps.jakarto.com/?lat=…&lng=…`) directement depuis le widget, en
+  plus de l'intégration API JS embarquée.
+- `services/jakarto.ts` : ajout de `buildJakartownsUrl(position, options)`
+  (options `pan`/`tilt`/`fov`/`year`, cf. doc API URL).
+- `widget.tsx` : nouvelle barre d'outils persistante avec un lien
+  "Ouvrir dans Jakartowns ↗" (`target="_blank"`), visible dès qu'une carte
+  est liée — **indépendamment de l'état de connexion à l'API JS**. La
+  position utilisée est la dernière connue (clic sur la carte ou navigation
+  dans le panorama embarqué), avec repli sur `config.fallbackLatitude/Longitude`
+  tant qu'aucune interaction n'a eu lieu.
+- Intérêt : ce lien ne dépend pas du cookie de session partitionné ni du
+  chargement du script `v1.js` — il fonctionne même si l'intégration API JS
+  est bloquée par la politique cross-site du navigateur dans le contexte du
+  portail (risque identifié plus haut, toujours non vérifié en environnement
+  réel). Ça donne un chemin de repli fiable pendant qu'on valide le reste.
+
 ## 2026-07-10 — MVP scaffold complet, corrections de finition
 
 - `manifest.json` : `translatedLocales` corrigé à `["fr"]` (une seule

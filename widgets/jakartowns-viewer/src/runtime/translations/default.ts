@@ -9,5 +9,6 @@ export default {
   loginButtonLoading: 'Connexion…',
   loginError: "Échec de la connexion. Vérifiez votre clé d'API.",
   loginLink: 'Récupérer votre clé API',
-  logoutButton: 'Déconnexion'
+  logoutButton: 'Déconnexion',
+  openInJakartownsLink: 'Ouvrir dans Jakartowns ↗'
 }

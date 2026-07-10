@@ -23,6 +23,7 @@ const JAKARTO_LOGIN_URL = 'https://account.jakarto.com/users/trade-api-key'
 const JAKARTO_AUTH_CHECK_URL = 'https://account.jakarto.com/auth'
 const JAKARTO_LOGOUT_URL = 'https://account.jakarto.com/users/logout'
 const JAKARTOWNS_SCRIPT_URL = 'https://maps.jakarto.com/api/v1.js'
+const JAKARTOWNS_APP_URL = 'https://maps.jakarto.com/'
 
 export interface JakartoPosition {
   latitude: number
@@ -200,4 +201,34 @@ export async function initializeViewer(
       }
     )
   })
+}
+
+export interface JakartownsUrlOptions {
+  /** Rotation horizontale (0 = Nord, π/2 = Ouest, π = Sud). */
+  pan?: number
+  /** Inclinaison verticale (0 = horizontal, ±π/2 = zénith/nadir). */
+  tilt?: number
+  /** Champ de vision, de 10 à 100 (défaut 100). */
+  fov?: number
+  /** Année des données cartographiques à afficher, si plusieurs sont disponibles. */
+  year?: number
+}
+
+/**
+ * Construit une URL Jakartowns (API URL, cf. docs/research-jakartowns-api.md
+ * §6) pointant sur une position donnée. Contrairement à l'intégration API JS
+ * ci-dessus, cette URL s'ouvre dans un onglet séparé sur maps.jakarto.com :
+ * elle ne dépend donc pas du cookie de session partitionné du widget, et
+ * fonctionne même si l'utilisateur n'est pas connecté dans le widget (il lui
+ * sera demandé de se connecter sur maps.jakarto.com si nécessaire).
+ */
+export function buildJakartownsUrl(position: JakartoPosition, options: JakartownsUrlOptions = {}): string {
+  const params = new URLSearchParams()
+  params.set('lat', String(position.latitude))
+  params.set('lng', String(position.longitude))
+  if (options.pan != null) params.set('pan', String(options.pan))
+  if (options.tilt != null) params.set('tilt', String(options.tilt))
+  if (options.fov != null) params.set('fov', String(options.fov))
+  if (options.year != null) params.set('year', String(options.year))
+  return `${JAKARTOWNS_APP_URL}?${params.toString()}`
 }

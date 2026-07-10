@@ -6,6 +6,7 @@ import {
   authenticate,
   logout,
   initializeViewer,
+  buildJakartownsUrl,
   type JakartoPosition,
   type JakartoViewerHandle
 } from './services/jakarto'
@@ -36,6 +37,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const viewerContainerRef = React.useRef<HTMLDivElement>(null)
   const viewerHandleRef = React.useRef<JakartoViewerHandle>(null)
+
+  // Dernière position connue (clic carte ou navigation Jakartowns), utilisée
+  // pour le lien "Ouvrir dans Jakartowns" (API URL) — disponible même sans
+  // connexion à l'intégration API JS ci-dessous.
+  const [currentPosition, setCurrentPosition] = React.useState<JakartoPosition | null>(null)
 
   const spatialSync = useSpatialSync()
 
@@ -87,6 +93,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       latitude: center?.latitude ?? config.fallbackLatitude,
       longitude: center?.longitude ?? config.fallbackLongitude,
       onNavigate: (position: JakartoPosition) => {
+        setCurrentPosition(position)
         spatialSync.onJakartoNavigate(position, (p) => {
           const activeView = jimuMapViewRef.current?.view
           activeView?.goTo({ center: [p.longitude, p.latitude] }, { duration: 600 })
@@ -115,8 +122,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
     const clickHandle = view.on('click', (event) => {
       const { latitude, longitude } = event.mapPoint
-      spatialSync.onMapClick({ latitude, longitude }, (position) => {
-        viewerHandleRef.current?.setPosition(position)
+      const position = { latitude, longitude }
+      setCurrentPosition(position)
+      spatialSync.onMapClick(position, (p) => {
+        viewerHandleRef.current?.setPosition(p)
       })
     })
 
@@ -141,6 +150,22 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       {hasLinkedMap && !jimuMapView && (
         <div className="jakartowns-viewer-placeholder">
           {defaultMessages.waitingForMap}
+        </div>
+      )}
+
+      {hasLinkedMap && jimuMapView && (
+        <div className="jakartowns-viewer-toolbar">
+          <a
+            className="jakartowns-viewer-open-url-link"
+            href={buildJakartownsUrl(currentPosition ?? {
+              latitude: config.fallbackLatitude,
+              longitude: config.fallbackLongitude
+            })}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {defaultMessages.openInJakartownsLink}
+          </a>
         </div>
       )}
 

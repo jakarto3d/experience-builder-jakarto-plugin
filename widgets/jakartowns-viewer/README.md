@@ -60,6 +60,12 @@ existante.
   `docs/progress.md`, entrée du 2026-07-10).
 - Une fois connecté, cliquer sur la carte liée déplace le panorama
   Jakartowns à cet endroit ; naviguer dans le panorama recentre la carte.
+- Un lien **"Ouvrir dans Jakartowns ↗"** est toujours visible dès qu'une
+  carte est liée, connexion ou non : il ouvre `maps.jakarto.com` dans un
+  nouvel onglet, à la dernière position connue (via l'API URL, pas l'API
+  JS). Ce lien ne dépend pas de la connexion à l'intégration embarquée —
+  c'est un chemin de repli utile si l'auth cross-site pose problème dans le
+  contexte du portail.
 
 ## Limitations connues (à vérifier en environnement réel)
 
