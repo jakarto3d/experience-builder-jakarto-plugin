@@ -18,29 +18,48 @@ import { buildObserverIconDataUrl, OBSERVER_ICON_SIZE, DEFAULT_OBSERVER_FOV } fr
 import defaultMessages from './translations/default'
 import './widget.css'
 
-// panelSize.height est la hauteur TOTALE du panneau (barre de titre incluse),
-// pas seulement celle du panorama : la barre de titre garde toujours sa
-// taille naturelle (flex-shrink: 0 en CSS) et le panorama se partage le
-// reste via flex:1, donc aucun calcul manuel de soustraction n'est
-// nécessaire ici — la barre de titre et le fil des dates ne peuvent plus
-// disparaître à cause d'une erreur d'arithmétique sur la hauteur.
+// panelSize.height is the panel's TOTAL height (title bar included), not
+// just the panorama's: the title bar always keeps its natural size
+// (flex-shrink: 0 in CSS) and the panorama shares the rest via flex:1, so no
+// manual subtraction is needed here — the title bar and the date timeline
+// can no longer disappear because of a height arithmetic mistake.
 const DEFAULT_PANEL_WIDTH = 380
 const DEFAULT_PANEL_HEIGHT = 360
 const MIN_PANEL_WIDTH = 260
 const MIN_PANEL_HEIGHT = 220
 const TIMELINE_SCROLL_STEP = 160
 const PANEL_MARGIN = 12
-// Arrondi du fov avant de régénérer l'icône (évite de reconstruire le SVG à
-// chaque micro-variation de zoom dans le panorama) — même principe que
-// JKTOWNS_FOV_PRECISION dans l'implémentation de référence.
+// Rounds the fov before regenerating the icon (avoids rebuilding the SVG on
+// every micro-variation of zoom inside the panorama) — same principle as
+// JKTOWNS_FOV_PRECISION in the reference implementation.
 const OBSERVER_FOV_PRECISION = 2
 
 /**
- * Convertit le pan Jakartowns (0 = Nord, sens antihoraire — voir
- * buildJakartownsUrl) en un angle de rotation pour un symbole ArcGIS
- * (`PictureMarkerSymbol.angle`), exprimé en degrés sens horaire depuis le
- * Nord — même convention que `heading` sur l'ObserverIcon de jakui (voir
- * lib/observerIcon.ts), confirmée par sa documentation de props ("0 points
+ * The 8 resize handles (4 edges + 4 corners) only differ by their CSS class
+ * suffix and the axis they affect — described here as data instead of
+ * duplicated in JSX (see the render below).
+ */
+const RESIZE_HANDLE_DIRECTIONS: ReadonlyArray<{
+  cssSuffix: string
+  directionX: -1 | 0 | 1
+  directionY: -1 | 0 | 1
+}> = [
+  { cssSuffix: 'n', directionX: 0, directionY: -1 },
+  { cssSuffix: 's', directionX: 0, directionY: 1 },
+  { cssSuffix: 'e', directionX: 1, directionY: 0 },
+  { cssSuffix: 'w', directionX: -1, directionY: 0 },
+  { cssSuffix: 'ne', directionX: 1, directionY: -1 },
+  { cssSuffix: 'nw', directionX: -1, directionY: -1 },
+  { cssSuffix: 'se', directionX: 1, directionY: 1 },
+  { cssSuffix: 'sw', directionX: -1, directionY: 1 }
+]
+
+/**
+ * Converts the Jakartowns pan (0 = North, counter-clockwise — see
+ * buildJakartownsUrl) into a rotation angle for an ArcGIS symbol
+ * (`PictureMarkerSymbol.angle`), expressed in degrees clockwise from
+ * North — same convention as `heading` on jakui's ObserverIcon (see
+ * lib/observerIcon.ts), confirmed by its props documentation ("0 points
  * up, positive values rotate clockwise").
  */
 function jakartownsPanToMarkerAngle(panRadians: number): number {
@@ -66,9 +85,9 @@ interface ResizeState {
   startTop: number
   startWidth: number
   startHeight: number
-  /** -1 = poignée à gauche (déplace + redimensionne), 1 = à droite (redimensionne seulement), 0 = pas concerné par cet axe. */
+  /** -1 = handle on the left (moves + resizes), 1 = on the right (resizes only), 0 = not involved on this axis. */
   directionX: -1 | 0 | 1
-  /** Idem verticalement : -1 = en haut, 1 = en bas. */
+  /** Same vertically: -1 = top, 1 = bottom. */
   directionY: -1 | 0 | 1
   rootWidth: number
   rootHeight: number
@@ -84,46 +103,55 @@ interface PanelSize {
   height: number
 }
 
-const IconChevron = ({ folded }: { folded: boolean }) => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"
-    strokeLinecap="round" strokeLinejoin="round" style={{ transform: folded ? 'rotate(180deg)' : 'none' }}>
-    <path d="M18 15l-6-6-6 6" />
+// Wrapper shared by all title-bar icons: same viewBox/size/stroke for all of
+// them, only the content (<path>/<circle>) changes from one icon to another.
+const ICON_VIEWBOX_SIZE = 24
+const ICON_DISPLAY_SIZE = 14
+const ICON_STROKE_WIDTH = 2
+
+const IconBase = ({ children, style }: { children: React.ReactNode, style?: React.CSSProperties }) => (
+  <svg viewBox={`0 0 ${ICON_VIEWBOX_SIZE} ${ICON_VIEWBOX_SIZE}`} width={ICON_DISPLAY_SIZE} height={ICON_DISPLAY_SIZE}
+    fill="none" stroke="currentColor" strokeWidth={ICON_STROKE_WIDTH}
+    strokeLinecap="round" strokeLinejoin="round" style={style}>
+    {children}
   </svg>
+)
+
+const IconChevron = ({ folded }: { folded: boolean }) => (
+  <IconBase style={{ transform: folded ? 'rotate(180deg)' : 'none' }}>
+    <path d="M18 15l-6-6-6 6" />
+  </IconBase>
 )
 
 const IconLogout = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"
-    strokeLinecap="round" strokeLinejoin="round">
+  <IconBase>
     <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
     <path d="M16 17l5-5-5-5" />
     <path d="M21 12H9" />
-  </svg>
+  </IconBase>
 )
 
 const IconTarget = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"
-    strokeLinecap="round" strokeLinejoin="round">
+  <IconBase>
     <circle cx="12" cy="12" r="8" />
     <circle cx="12" cy="12" r="3" />
     <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-  </svg>
+  </IconBase>
 )
 
 const IconExternalLink = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"
-    strokeLinecap="round" strokeLinejoin="round">
+  <IconBase>
     <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
     <path d="M15 3h6v6" />
     <path d="M10 14L21 3" />
-  </svg>
+  </IconBase>
 )
 
 const IconGear = () => (
-  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2"
-    strokeLinecap="round" strokeLinejoin="round">
+  <IconBase>
     <circle cx="12" cy="12" r="3" />
     <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-  </svg>
+  </IconBase>
 )
 
 function formatJakartoDate(dateString: string | null): string | null {
@@ -134,17 +162,16 @@ function formatJakartoDate(dateString: string | null): string | null {
 }
 
 /**
- * Widget "Jakartowns Viewer".
+ * "Jakartowns Viewer" widget.
  *
- * Se lie au widget Map choisi dans les réglages (useMapWidgetIds) et affiche
- * le panorama Jakartowns dans un panneau flottant, repliable, déplaçable et
- * redimensionnable (dans les limites du widget). Deux façons de pointer un
- * endroit sur la carte liée :
- *   - mode "pointage" armé via le bouton dédié : le prochain clic gauche
- *     localise puis se désarme automatiquement (usage ponctuel)
- *   - clic droit sur la carte : toujours actif, sans devoir armer quoi que
- *     ce soit
- * Naviguer dans le panorama recentre la carte dans l'autre sens.
+ * Binds to the Map widget chosen in settings (useMapWidgetIds) and shows
+ * the Jakartowns panorama in a floating panel that can be folded, dragged,
+ * and resized (within the widget's bounds). Two ways to point at a
+ * location on the linked map:
+ *   - "picking" mode armed via the dedicated button: the next left click
+ *     locates and then disarms itself automatically (one-off use)
+ *   - right click on the map: always active, no need to arm anything
+ * Navigating inside the panorama recenters the map the other way around.
  */
 const Widget = (props: AllWidgetProps<IMConfig>) => {
   const { useMapWidgetIds, config } = props
@@ -154,8 +181,8 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const panelRef = React.useRef<HTMLDivElement>(null)
   const dragStateRef = React.useRef<DragState | null>(null)
   const resizeStateRef = React.useRef<ResizeState | null>(null)
-  // Tant que l'utilisateur n'a pas lui-même déplacé/redimensionné le
-  // panneau, celui-ci occupe tout l'espace disponible du widget par défaut.
+  // As long as the user hasn't moved/resized the panel themselves, it
+  // occupies all the widget's available space by default.
   const hasCustomSizeRef = React.useRef(false)
   const [panelPosition, setPanelPosition] = React.useState<PanelPosition | null>(null)
   const [panelSize, setPanelSize] = React.useState<PanelSize>({ width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANEL_HEIGHT })
@@ -164,13 +191,13 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const [jimuMapView, setJimuMapView] = React.useState<JimuMapView>(null)
   const jimuMapViewRef = React.useRef<JimuMapView>(null)
 
-  // Par défaut, le panneau occupe tout l'espace disponible du widget plutôt
-  // qu'une petite taille fixe — jusqu'à ce que l'utilisateur le déplace ou
-  // le redimensionne lui-même (cf. hasCustomSizeRef), après quoi son choix
-  // est respecté même si le widget change de taille. Dépend de `jimuMapView`
-  // (pas `[]`) : le panneau n'existe dans le DOM qu'une fois la carte liée
-  // active, donc un effet à dépendances vides s'exécuterait avant que
-  // `panelRef` soit renseigné et ne se redéclencherait jamais.
+  // By default, the panel occupies all the widget's available space rather
+  // than a small fixed size — until the user drags or resizes it themselves
+  // (see hasCustomSizeRef), after which their choice is respected even if
+  // the widget changes size. Depends on `jimuMapView` (not `[]`): the panel
+  // only exists in the DOM once the linked map is active, so an effect with
+  // empty dependencies would run before `panelRef` is set and would never
+  // re-run afterward.
   React.useLayoutEffect(() => {
     const root = widgetRootRef.current
     const panel = panelRef.current
@@ -203,16 +230,16 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const [settings, setSettings] = React.useState<JakartoWidgetSettings>(() => getStoredSettings())
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
-  // Couvre le bouton engrenage ET le popover (pas juste le popover) : sinon
-  // cliquer sur le bouton lui-même pendant que le popover est ouvert compte
-  // comme un "clic en dehors" au pointerdown (le fermant), puis le click qui
-  // suit sur le bouton le rouvre aussitôt via le toggle — au final il ne se
-  // fermait jamais vraiment en cliquant dessus.
+  // Covers the gear button AND the popover (not just the popover): otherwise
+  // clicking the button itself while the popover is open counts as an
+  // "outside click" on pointerdown (closing it), then the click that follows
+  // on the button reopens it right away via the toggle — it would never
+  // actually close when clicking on it.
   const settingsAnchorRef = React.useRef<HTMLDivElement>(null)
 
-  // Dernière position connue (clic carte ou navigation Jakartowns), utilisée
-  // en repli pour le bouton "Ouvrir dans Jakartowns" tant qu'aucune image
-  // n'est encore chargée dans le viewer.
+  // Last known position (map click or Jakartowns navigation), used as a
+  // fallback for the "Open in Jakartowns" button as long as no image is
+  // loaded in the viewer yet.
   const [currentPosition, setCurrentPosition] = React.useState<JakartoPosition | null>(null)
   const [currentDate, setCurrentDate] = React.useState<string | null>(null)
   const [currentImageId, setCurrentImageId] = React.useState<string | null>(null)
@@ -221,12 +248,13 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const [isPickingEnabled, setIsPickingEnabled] = React.useState(false)
   const isPickingEnabledRef = React.useRef(false)
 
-  // Indicateur de position/orientation sur la carte liée (voir l'effet plus
-  // bas). arcgisModulesRef garde Graphic pour ne le charger qu'une fois ;
-  // positionGraphicRef est le graphic unique qu'on repositionne/réoriente au
-  // lieu d'en recréer un à chaque mise à jour. L'icône (SVG en data-URL)
-  // n'est régénérée que si le fov (arrondi) a changé — le cap se règle
-  // séparément via l'angle du symbole, sans toucher à l'image.
+  // Position/orientation indicator on the linked map (see the effect
+  // further down). arcgisModulesRef holds Graphic so it's only loaded once;
+  // positionGraphicRef is the single graphic that gets repositioned/
+  // reoriented instead of being recreated on every update. The icon (SVG as
+  // a data URL) is only regenerated if the (rounded) fov has changed — the
+  // heading is set separately via the symbol's angle, without touching the
+  // image.
   const arcgisModulesRef = React.useRef<{ Graphic: any } | null>(null)
   const positionGraphicsLayerRef = React.useRef<any>(null)
   const positionGraphicRef = React.useRef<any>(null)
@@ -246,7 +274,6 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     isPickingEnabledRef.current = isPickingEnabled
   }, [isPickingEnabled])
 
-  // Ferme le popover de réglages au clic en dehors.
   React.useEffect(() => {
     if (!isSettingsOpen) return
     const onPointerDownOutside = (event: PointerEvent) => {
@@ -264,9 +291,9 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     storeSettings(next)
   }
 
-  // Reconnexion automatique si une clé API a déjà été validée sur ce
-  // navigateur (cf. services/jakarto.ts — contourne le CORS bloquant sur
-  // le endpoint de vérification de session).
+  // Automatic reconnection if an API key has already been validated on
+  // this browser (see services/jakarto.ts — works around the CORS
+  // restriction on the session-check endpoint).
   React.useEffect(() => {
     const storedApiKey = getStoredApiKey()
     if (!storedApiKey) return
@@ -317,10 +344,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
-  // Crée la couche accueillant l'indicateur de position/orientation, une
-  // fois par vue de carte. Ne dépend d'aucune donnée Jakarto (juste
-  // GraphicsLayer/Graphic d'ArcGIS) : pas de souci d'auth cross-origin ici,
-  // contrairement à la couche jakman (retirée).
+  // Creates the layer hosting the position/orientation indicator, once per
+  // map view. Doesn't depend on any Jakarto data (just ArcGIS's
+  // GraphicsLayer/Graphic): no cross-origin auth concern here, unlike the
+  // (removed) jakman layer.
   React.useEffect(() => {
     const view = jimuMapView?.view
     if (!view) return
@@ -344,10 +371,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     }
   }, [jimuMapView])
 
-  // Déplace/réoriente le graphic existant plutôt que d'en recréer un à
-  // chaque appel (moins coûteux, utile vu la fréquence des événements
-  // `rotation`/`fov`). L'icône (image SVG) n'est régénérée que si le fov
-  // arrondi a changé ; le cap se règle via `symbol.angle` uniquement.
+  // Moves/reorients the existing graphic instead of recreating one on every
+  // call (cheaper, useful given how frequent `rotation`/`fov` events are).
+  // The icon (SVG image) is only regenerated if the rounded fov changed;
+  // the heading is set via `symbol.angle` only.
   const updatePositionMarker = React.useCallback((
     position: JakartoPosition,
     panRadians: number | null,
@@ -384,29 +411,27 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     }
   }, [])
 
-  // Initialise le viewer Jakartowns une fois authentifié et le conteneur monté.
+  // Initializes the Jakartowns viewer once authenticated and the container is mounted.
   React.useEffect(() => {
     if (!isAuthenticated || !viewerContainerRef.current) return
 
     let cancelled = false
 
-    // Ne charge aucun panorama par défaut : sans repère fiable de l'endroit
-    // où Jakarto a des données (le centre de la carte ou une position de
-    // repli arbitraire peuvent tomber loin de toute couverture), Jakartowns
-    // semblait "téléporter" la vue vers le point de données disponible le
-    // plus proche (observé : bien à l'ouest de l'Ontario, la donnée la plus
-    // à l'ouest de Jakarto) — déroutant, et source probable du fil des
-    // dates resté vide au premier chargement. On ne passe une position
-    // initiale que si l'utilisateur en a déjà choisi une dans cette session
-    // (ex. déconnexion/reconnexion après un premier clic) ; sinon le viewer
-    // se monte "vide" jusqu'au premier clic sur la carte (mode pointage ou
-    // clic droit).
+    // Loads no panorama by default: without a reliable landmark for where
+    // Jakarto has data (the map's center or an arbitrary fallback position
+    // could land far from any coverage), Jakartowns seemed to "teleport"
+    // the view to the nearest available data point (observed: far west in
+    // Ontario, Jakarto's westernmost data) — confusing, and the likely
+    // cause of the date timeline staying empty on first load. An initial
+    // position is only passed if the user already picked one during this
+    // session (e.g. logout/login after a first click); otherwise the
+    // viewer mounts "empty" until the first click on the map (picking mode
+    // or right click).
     initializeViewer(viewerContainerRef.current, {
       ...(currentPosition ? { latitude: currentPosition.latitude, longitude: currentPosition.longitude } : {}),
-      // Ne recentre plus la carte au changement d'image/position dans le
-      // panorama (comportement jugé trop intrusif) : seul l'indicateur sur
-      // la carte se met à jour, la vue de l'utilisateur reste sous son
-      // contrôle.
+      // No longer recenters the map when the image/position changes inside
+      // the panorama (deemed too intrusive): only the indicator on the map
+      // updates, the user's view stays under their control.
       onViewChange: (state) => {
         if (state.latitude != null && state.longitude != null) {
           const position = { latitude: state.latitude, longitude: state.longitude }
@@ -439,11 +464,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated])
 
-  // Relaie vers le panorama Jakartowns : un clic gauche quand le mode
-  // "pointage" est armé (désarmé automatiquement après usage), ou un clic
-  // droit — seulement si l'utilisateur l'a explicitement activé dans les
-  // réglages (désactivé par défaut : peut entrer en conflit avec un
-  // comportement par défaut de l'application hôte).
+  // Relays to the Jakartowns panorama: a left click when "picking" mode is
+  // armed (auto-disarmed after use), or a right click — only if the user
+  // explicitly enabled it in settings (disabled by default: can conflict
+  // with a default behavior of the host application).
   React.useEffect(() => {
     const view = jimuMapView?.view
     if (!view) return
@@ -477,10 +501,9 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   }, [jimuMapView, settings.rightClickToLocate])
 
   const handleTitleBarPointerDown = (event: React.PointerEvent) => {
-    // Sans ce garde-fou, cliquer sur un bouton de la barre de titre (déconnexion,
-    // replier) démarre quand même un glisser-déposer : le pointerdown remonte
-    // (bubbling) jusqu'ici, setPointerCapture capture le pointeur sur la barre de
-    // titre, et le click du bouton ne se déclenche alors plus jamais.
+    // Without this guard, clicking a title-bar button (logout, fold) would still
+    // start a drag: the pointerdown bubbles up here, setPointerCapture grabs the
+    // pointer on the title bar, and the button's click event never fires.
     if ((event.target as HTMLElement).closest('button, input, label, .jakartowns-viewer-settings-popover')) return
     const panel = panelRef.current
     const root = widgetRootRef.current
@@ -582,17 +605,15 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     timelineListRef.current?.scrollBy({ left: direction * TIMELINE_SCROLL_STEP, behavior: 'smooth' })
   }
 
-  // Toujours au moins l'image courante (même sans multipass), pour que la
-  // date reste visible dans tous les cas — pas seulement quand plusieurs
-  // captures existent au même endroit.
+  // Always at least the current image (even without multipass), so the
+  // date stays visible in every case — not just when several captures
+  // exist at the same spot.
   const timelineEntries: JakartoMultipassImage[] = availableImages.length > 0
     ? availableImages
     : currentImageId != null
       ? [{ imageId: currentImageId, date: currentDate }]
       : []
 
-  // Désactive les flèches quand le fil des dates tient déjà dans l'espace
-  // disponible (rien à faire défiler).
   const [canScrollTimeline, setCanScrollTimeline] = React.useState(false)
 
   const updateCanScrollTimeline = React.useCallback(() => {
@@ -639,11 +660,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           ref={panelRef}
           style={{
             width: panelSize.width,
-            // Pas de hauteur imposée quand replié : le panneau doit pouvoir
-            // reprendre sa taille naturelle (juste la barre de titre) au
-            // lieu de garder la hauteur dépliée avec un grand vide en
-            // dessous (panel-body passe en display:none, mais une hauteur
-            // fixée en inline style ne s'ajuste pas toute seule au contenu).
+            // No height forced when folded: the panel must fall back to its
+            // natural size (just the title bar) instead of keeping the
+            // unfolded height with a big empty gap below (panel-body
+            // switches to display:none, but an inline-styled height doesn't
+            // shrink to fit its content on its own).
             ...(isPanelFolded ? {} : { height: panelSize.height }),
             ...(panelPosition ? { left: panelPosition.left, top: panelPosition.top } : {})
           }}
@@ -726,11 +747,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           </div>
 
           {/*
-            Masqué en CSS (pas démonté du JSX) quand replié : le conteneur
-            du panorama ci-dessous héberge le canvas WebGL de Jakartowns,
-            monté une seule fois par initializeViewer. Le démonter puis le
-            remonter (via un rendu conditionnel) casse ce canvas —
-            Jakartowns ne le recrée pas tout seul dans une nouvelle div vide.
+            Hidden via CSS (not unmounted from the JSX) when folded: the
+            panorama container below hosts Jakartowns' WebGL canvas, mounted
+            once by initializeViewer. Unmounting then remounting it (via
+            conditional rendering) breaks that canvas — Jakartowns doesn't
+            recreate it on its own in a new empty div.
           */}
           <div className={'jakartowns-viewer-panel-body' + (isPanelFolded ? ' jakartowns-viewer-panel-body--hidden' : '')}>
             {!isAuthenticated && (
@@ -816,58 +837,15 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             )}
           </div>
 
-          {!isPanelFolded && (
-            <>
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-n"
-                onPointerDown={handleResizeHandlePointerDown(0, -1)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-s"
-                onPointerDown={handleResizeHandlePointerDown(0, 1)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-e"
-                onPointerDown={handleResizeHandlePointerDown(1, 0)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-w"
-                onPointerDown={handleResizeHandlePointerDown(-1, 0)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-ne"
-                onPointerDown={handleResizeHandlePointerDown(1, -1)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-nw"
-                onPointerDown={handleResizeHandlePointerDown(-1, -1)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-se"
-                onPointerDown={handleResizeHandlePointerDown(1, 1)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-              <div
-                className="jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-sw"
-                onPointerDown={handleResizeHandlePointerDown(-1, 1)}
-                onPointerMove={handleResizeHandlePointerMove}
-                onPointerUp={handleResizeHandlePointerUp}
-              />
-            </>
-          )}
+          {!isPanelFolded && RESIZE_HANDLE_DIRECTIONS.map(({ cssSuffix, directionX, directionY }) => (
+            <div
+              key={cssSuffix}
+              className={`jakartowns-viewer-resize-handle jakartowns-viewer-resize-handle-${cssSuffix}`}
+              onPointerDown={handleResizeHandlePointerDown(directionX, directionY)}
+              onPointerMove={handleResizeHandlePointerMove}
+              onPointerUp={handleResizeHandlePointerUp}
+            />
+          ))}
         </div>
       )}
     </div>

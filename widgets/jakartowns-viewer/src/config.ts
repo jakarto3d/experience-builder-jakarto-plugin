@@ -1,16 +1,16 @@
 import { type ImmutableObject } from 'jimu-core'
 
 /**
- * Options exposées dans le panneau de réglages du widget (voir src/setting/setting.tsx).
- * `useMapWidgetIds` (la liaison à un widget Map) est un champ standard d'Experience
- * Builder, géré séparément par le framework — il n'apparaît pas ici.
+ * Options exposed in the widget's settings panel (see src/setting/setting.tsx).
+ * `useMapWidgetIds` (the binding to a Map widget) is a standard Experience
+ * Builder field, handled separately by the framework — it doesn't appear here.
  *
- * Les valeurs par défaut vivent dans ../config.json (pas ici) : sans ce fichier,
- * Experience Builder marque le widget `hasConfig: false` et `props.config` reste
- * indéfini, ce qui fait planter le panneau de réglages au chargement.
+ * Default values live in ../config.json (not here): without that file,
+ * Experience Builder marks the widget `hasConfig: false` and `props.config`
+ * stays undefined, which crashes the settings panel on load.
  */
 export interface Config {
-  /** Position de repli tant qu'aucun clic/extent n'a été reçu de la carte liée. */
+  /** Fallback position as long as no click/extent has been received from the linked map. */
   fallbackLatitude: number
   fallbackLongitude: number
 }

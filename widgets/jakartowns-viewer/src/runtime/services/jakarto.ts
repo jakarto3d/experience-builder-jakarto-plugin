@@ -1,28 +1,28 @@
 /**
  * services/jakarto.ts
  *
- * Isole toute l'intégration Jakartowns (auth + embed du viewer) du reste du
- * widget React, sur le même principe que `esri_js_sdk_demo/services/jakarto.js`
- * (le prototype Vue de référence).
+ * Isolates all Jakartowns integration (auth + viewer embed) from the rest
+ * of the React widget, on the same principle as
+ * `esri_js_sdk_demo/services/jakarto.js` (the reference Vue prototype).
  *
- * Différence volontaire par rapport au prototype : ici l'état du viewer
- * (`JakartoViewerHandle`) est renvoyé par instance plutôt que gardé dans des
- * variables de module — une page Experience Builder peut contenir plusieurs
- * instances du même widget, un état module-scoped serait donc partagé (et
- * casserait) entre elles.
+ * Deliberate difference from the prototype: here the viewer state
+ * (`JakartoViewerHandle`) is returned per instance instead of kept in
+ * module-level variables — an Experience Builder page can contain several
+ * instances of the same widget, so module-scoped state would be shared
+ * (and would break) between them.
  *
- * Flux d'authentification (cf. docs/research-jakartowns-api.md) :
- *   1. L'utilisateur fournit sa clé API Jakarto.
- *   2. Échange contre un cookie de session via account.jakarto.com.
- *   3. Chargement du script https://maps.jakarto.com/api/v1.js (autorisé par
- *      le cookie de session).
- *   4. Création du viewer via window.jakartowns.app.create_jakartowns(...).
+ * Authentication flow (see docs/research-jakartowns-api.md):
+ *   1. The user provides their Jakarto API key.
+ *   2. It's exchanged for a session cookie via account.jakarto.com.
+ *   3. The script https://maps.jakarto.com/api/v1.js is loaded (authorized
+ *      by the session cookie).
+ *   4. The viewer is created via window.jakartowns.app.create_jakartowns(...).
  *
- * La clé API est aussi mise en cache dans localStorage (cf. `getStoredApiKey`
- * / `storeApiKey`) : `checkAuthStatus` (l'ancienne façon de détecter une
- * session déjà active) est bloqué par CORS sur `account.jakarto.com/auth`
- * depuis la plupart des origines d'embarquement, donc on ne peut pas
- * compter dessus pour éviter de redemander la clé à chaque rechargement.
+ * The API key is also cached in localStorage (see `getStoredApiKey` /
+ * `storeApiKey`): `checkAuthStatus` (the older way to detect an already
+ * active session) is blocked by CORS on `account.jakarto.com/auth` from
+ * most embedding origins, so it can't be relied on to avoid re-asking for
+ * the key on every reload.
  */
 
 const JAKARTO_LOGIN_URL = 'https://account.jakarto.com/users/trade-api-key'
@@ -31,6 +31,8 @@ const JAKARTOWNS_SCRIPT_URL = 'https://maps.jakarto.com/api/v1.js'
 const JAKARTOWNS_APP_URL = 'https://maps.jakarto.com/'
 const API_KEY_STORAGE_KEY = 'jakartowns-viewer:apiKey'
 const SETTINGS_STORAGE_KEY = 'jakartowns-viewer:settings'
+// Upper bound of the random suffix generated for the viewer container's id (see initializeViewer).
+const CONTAINER_ID_RANDOM_SUFFIX_MAX = 1e6
 
 export interface JakartoPosition {
   latitude: number
@@ -42,7 +44,7 @@ export interface JakartoMultipassImage {
   date: string | null
 }
 
-/** Snapshot de ce que le viewer affiche actuellement. */
+/** Snapshot of what the viewer currently displays. */
 export interface JakartoViewState {
   latitude: number | null
   longitude: number | null
@@ -64,12 +66,12 @@ interface JakartownsViewer {
 }
 
 /**
- * Le viewer n'expose PAS de méthode `.on(...)` : il dispatche ses événements
- * de navigation sur `window`, en `CustomEvent`. Confirmé en lisant le code
- * réel d'une app Jakarto en production, qui écoute exactement de cette
- * façon. Attention : ces événements sont globaux, pas scopés par instance —
- * deux widgets Jakartowns sur la même page recevraient les événements l'un
- * de l'autre (limitation de la librairie, pas de notre côté).
+ * The viewer does NOT expose an `.on(...)` method: it dispatches its
+ * navigation events on `window`, as `CustomEvent`s. Confirmed by reading
+ * the actual code of a production Jakarto app, which listens exactly this
+ * way. Note: these events are global, not scoped per instance — two
+ * Jakartowns widgets on the same page would receive each other's events
+ * (a library limitation, not something on our side).
  */
 interface JakartownsPositionEventDetail {
   latitude: number
@@ -105,40 +107,55 @@ declare global {
 }
 
 /**
- * Récupère la clé API Jakarto mise en cache localement, si l'utilisateur
- * s'est déjà connecté avec succès sur ce navigateur.
+ * localStorage can throw (strict private browsing, sandboxed iframe…):
+ * these three wrappers isolate the try/catch — not blocking for the
+ * caller, just less convenient for the user (key/settings re-asked).
  */
-export function getStoredApiKey(): string | null {
+function readLocalStorageItem(key: string): string | null {
   try {
-    return window.localStorage.getItem(API_KEY_STORAGE_KEY)
+    return window.localStorage.getItem(key)
   } catch {
-    // localStorage indisponible (navigation privée stricte, iframe sandboxée…) : tant pis, on redemandera la clé.
     return null
   }
 }
 
-function storeApiKey(apiKey: string): void {
+function writeLocalStorageItem(key: string, value: string): void {
   try {
-    window.localStorage.setItem(API_KEY_STORAGE_KEY, apiKey)
+    window.localStorage.setItem(key, value)
   } catch {
-    // idem : pas bloquant, juste moins pratique pour l'utilisateur.
+    // ignored, see comment above.
   }
+}
+
+function removeLocalStorageItem(key: string): void {
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // ignored, see comment above.
+  }
+}
+
+/**
+ * Retrieves the Jakarto API key cached locally, if the user has already
+ * successfully logged in on this browser.
+ */
+export function getStoredApiKey(): string | null {
+  return readLocalStorageItem(API_KEY_STORAGE_KEY)
+}
+
+function storeApiKey(apiKey: string): void {
+  writeLocalStorageItem(API_KEY_STORAGE_KEY, apiKey)
 }
 
 function clearStoredApiKey(): void {
-  try {
-    window.localStorage.removeItem(API_KEY_STORAGE_KEY)
-  } catch {
-    // idem.
-  }
+  removeLocalStorageItem(API_KEY_STORAGE_KEY)
 }
 
-/** Réglages du widget que l'utilisateur peut activer explicitement (cf. panneau réglages). */
+/** Widget settings the user can explicitly enable (see settings panel). */
 export interface JakartoWidgetSettings {
   /**
-   * Le clic droit sur la carte peut entrer en conflit avec un comportement
-   * par défaut de l'application hôte — désactivé tant que l'utilisateur ne
-   * l'active pas explicitement.
+   * Right-clicking the map can conflict with a default behavior of the
+   * host application — disabled until the user explicitly enables it.
    */
   rightClickToLocate: boolean
 }
@@ -147,29 +164,25 @@ const DEFAULT_SETTINGS: JakartoWidgetSettings = {
   rightClickToLocate: false
 }
 
-/** Charge les réglages du widget depuis localStorage (repli sur les valeurs par défaut). */
+/** Loads widget settings from localStorage (falls back to defaults). */
 export function getStoredSettings(): JakartoWidgetSettings {
+  const raw = readLocalStorageItem(SETTINGS_STORAGE_KEY)
+  if (!raw) return { ...DEFAULT_SETTINGS }
   try {
-    const raw = window.localStorage.getItem(SETTINGS_STORAGE_KEY)
-    if (!raw) return { ...DEFAULT_SETTINGS }
     return { ...DEFAULT_SETTINGS, ...JSON.parse(raw) }
   } catch {
+    // Corrupted JSON: fall back to defaults instead of crashing.
     return { ...DEFAULT_SETTINGS }
   }
 }
 
 export function storeSettings(settings: JakartoWidgetSettings): void {
-  try {
-    window.localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
-  } catch {
-    // pas bloquant : le réglage ne persistera juste pas entre deux visites.
-  }
+  writeLocalStorageItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
 }
 
 /**
- * Échange une clé API Jakarto contre un cookie de session, et la met en
- * cache localement en cas de succès pour éviter de la redemander au
- * prochain chargement du widget.
+ * Exchanges a Jakarto API key for a session cookie, and caches it locally
+ * on success to avoid re-asking for it on the widget's next load.
  */
 export async function authenticate(apiKey: string): Promise<boolean> {
   try {
@@ -191,7 +204,7 @@ export async function authenticate(apiKey: string): Promise<boolean> {
 }
 
 /**
- * Invalide le cookie de session Jakarto en cours et oublie la clé mise en cache.
+ * Invalidates the current Jakarto session cookie and forgets the cached key.
  */
 export async function logout(): Promise<boolean> {
   clearStoredApiKey()
@@ -225,34 +238,34 @@ function loadJakartownsScript(): Promise<void> {
 export interface InitializeViewerOptions {
   latitude?: number
   longitude?: number
-  /** Appelé à chaque changement de position/image (événement `position`). */
+  /** Called on every position/image change (`position` event). */
   onViewChange?: (state: JakartoViewState) => void
   /**
-   * Appelé à chaque rotation ou changement de champ de vision (peut être
-   * fréquent pendant un glisser/zoom dans le panorama) — séparé de
-   * `onViewChange` pour permettre de mettre à jour un indicateur
-   * d'orientation sans déclencher de re-render React à chaque tick. `pan`
-   * peut être `null` si aucun événement `rotation` n'est encore arrivé.
+   * Called on every rotation or field-of-view change (can fire frequently
+   * during a drag/zoom inside the panorama) — separate from `onViewChange`
+   * to allow updating an orientation indicator without triggering a React
+   * re-render on every tick. `pan` can be `null` if no `rotation` event has
+   * arrived yet.
    */
   onOrientationChange?: (pan: number | null, fov: number | null) => void
 }
 
 export interface JakartoViewerHandle {
-  /** Déplace la vue panoramique — utilisé pour la synchronisation carte → Jakartowns. */
+  /** Moves the panorama view — used for map → Jakartowns synchronization. */
   setPosition: (position: JakartoPosition) => void
-  /** Affiche une image précise parmi celles disponibles au même endroit (multipass). */
+  /** Displays a specific image among those available at the same spot (multipass). */
   setImage: (imageId: string) => void
-  /** Snapshot synchrone de l'état actuel (position, image, orientation) — utilisé au clic sur "Ouvrir dans Jakartowns". */
+  /** Synchronous snapshot of the current state (position, image, orientation) — used when clicking "Open in Jakartowns". */
   getViewState: () => JakartoViewState
-  /** Arrête de propager les événements du viewer (à appeler au démontage du widget). */
+  /** Stops propagating the viewer's events (call on widget unmount). */
   destroy: () => void
 }
 
 /**
- * Initialise le viewer Jakartowns dans un conteneur DOM.
- * Doit être appelé seulement après une authentification réussie.
+ * Initializes the Jakartowns viewer inside a DOM container.
+ * Must only be called after a successful authentication.
  *
- * @returns `null` si le script/l'API Jakartowns n'a pas pu être chargé.
+ * @returns `null` if the Jakartowns script/API couldn't be loaded.
  */
 export async function initializeViewer(
   container: HTMLElement,
@@ -266,19 +279,19 @@ export async function initializeViewer(
     return null
   }
 
-  // create_jakartowns prend un sélecteur CSS : le conteneur a besoin d'un id.
+  // create_jakartowns takes a CSS selector: the container needs an id.
   if (!container.id) {
-    container.id = `jakartowns-viewer-${Date.now()}-${Math.round(Math.random() * 1e6)}`
+    container.id = `jakartowns-viewer-${Date.now()}-${Math.round(Math.random() * CONTAINER_ID_RANDOM_SUFFIX_MAX)}`
   }
 
   return new Promise((resolve) => {
     api.app.create_jakartowns(
       `#${container.id}`,
       {
-        // On cache l'en-tête natif de Jakartowns (logo/recherche/aide) — le
-        // widget affiche sa propre bannière "Jakartowns" et sa propre carte
-        // ArcGIS fait déjà office de mini-carte. La boussole reste utile
-        // pour s'orienter dans le panorama.
+        // Hides Jakartowns' native header (logo/search/help) — the widget
+        // shows its own "Jakartowns" title bar and its ArcGIS map already
+        // acts as a minimap. The compass stays useful for orienting inside
+        // the panorama.
         headerEnabled: false,
         minimapEnabled: false,
         compassEnabled: true
@@ -312,10 +325,10 @@ export async function initializeViewer(
         }
         window.addEventListener('position', onPositionEvent)
 
-        // pan/tilt/fov ne sont utiles qu'au moment de construire l'URL "Ouvrir
-        // dans Jakartowns" (via getViewState()) : on les garde en interne
-        // sans déclencher de callback React à chaque micro-rotation, sauf
-        // onOrientationChange (dédié, léger) pour l'indicateur sur la carte.
+        // pan/tilt/fov are only useful when building the "Open in
+        // Jakartowns" URL (via getViewState()): kept internal without
+        // triggering a React callback on every micro-rotation, except for
+        // onOrientationChange (dedicated, lightweight) for the map indicator.
         const onRotationEvent = (event: Event) => {
           if (destroyed) return
           const pan = (event as CustomEvent<number>).detail
@@ -339,15 +352,14 @@ export async function initializeViewer(
         window.addEventListener('fov', onFovEvent)
 
         if (options.latitude != null && options.longitude != null) {
-          // Appelé depuis une frame différée (comme le dispatch de resize
-          // plus bas) : appelé de façon strictement synchrone ici, ce
-          // premier setPosition semble parfois s'exécuter avant que
-          // Jakartowns ait fini son initialisation interne, et l'événement
-          // `position` qui suit arrive alors sans `currentSphereInfo` — la
-          // date et le fil des images restent vides au tout premier
-          // chargement (observé par l'utilisateur). Non confirmé à 100%,
-          // mais peu coûteux à tenter vu le fix similaire déjà validé pour
-          // le canvas.
+          // Deferred to a later frame (like the resize dispatch below): if
+          // called strictly synchronously here, this first setPosition
+          // sometimes seems to run before Jakartowns finishes its internal
+          // initialization, and the following `position` event then arrives
+          // without `currentSphereInfo` — the date and image timeline stay
+          // empty on the very first load (observed by the user). Not 100%
+          // confirmed, but cheap to try given the similar fix already
+          // validated for the canvas below.
           const { latitude, longitude } = options
           requestAnimationFrame(() => {
             if (destroyed) return
@@ -355,13 +367,13 @@ export async function initializeViewer(
           })
         }
 
-        // Jakartowns ne redimensionne son canvas qu'en réaction à l'événement
-        // `resize` de `window` (pas de ResizeObserver sur son propre conteneur) —
-        // confirmé en observant que l'app jakassets-viewer force un
-        // `window.dispatchEvent(new Event('resize'))` à chaque changement de
-        // taille de son panneau contenant le viewer. Un conteneur monté par
-        // React ne déclenche jamais de vrai resize de fenêtre : sans ce coup de
-        // pouce, le canvas reste bloqué à sa taille de création (souvent 0x0).
+        // Jakartowns only resizes its canvas in reaction to `window`'s
+        // `resize` event (no ResizeObserver on its own container) —
+        // confirmed by observing that the jakassets-viewer app forces a
+        // `window.dispatchEvent(new Event('resize'))` on every size change
+        // of its panel containing the viewer. A container mounted by React
+        // never triggers a real window resize: without this nudge, the
+        // canvas stays stuck at its creation size (often 0x0).
         const dispatchResize = () => window.dispatchEvent(new Event('resize'))
         requestAnimationFrame(dispatchResize)
 
@@ -399,25 +411,24 @@ export async function initializeViewer(
 }
 
 export interface JakartownsUrlOptions {
-  /** Identifiant technique de l'image à ouvrir — priorisé sur lat/lng quand disponible pour pointer exactement la même capture. */
+  /** Technical id of the image to open — prioritized over lat/lng when available, to point at exactly the same capture. */
   uid?: string | null
-  /** Rotation horizontale (0 = Nord, π/2 = Ouest, π = Sud). */
+  /** Horizontal rotation (0 = North, π/2 = West, π = South). */
   pan?: number | null
-  /** Inclinaison verticale (0 = horizontal, ±π/2 = zénith/nadir). */
+  /** Vertical tilt (0 = horizontal, ±π/2 = zenith/nadir). */
   tilt?: number | null
-  /** Champ de vision, de 10 à 100 (défaut 100). */
+  /** Field of view, from 10 to 100 (default 100). */
   fov?: number | null
-  /** Année des données cartographiques à afficher, si plusieurs sont disponibles. */
+  /** Year of the map data to display, if several are available. */
   year?: number
 }
 
 /**
- * Construit une URL Jakartowns (API URL) pointant sur une position ou,
- * idéalement, sur une image précise (`uid`) — c'est ce que fait une app
- * Jakarto en production pour son bouton "Ouvrir dans Jakartowns" : elle
- * privilégie `uid` (+ pan/tilt/fov) plutôt que lat/lng dès qu'une image est
- * chargée, pour rouvrir exactement la même capture plutôt qu'une image
- * proche mais différente.
+ * Builds a Jakartowns URL pointing at a position or, ideally, at a
+ * specific image (`uid`) — this is what a production Jakarto app does for
+ * its "Open in Jakartowns" button: it prioritizes `uid` (+ pan/tilt/fov)
+ * over lat/lng as soon as an image is loaded, to reopen exactly the same
+ * capture rather than a nearby but different one.
  */
 export function buildJakartownsUrl(position: JakartoPosition, options: JakartownsUrlOptions = {}): string {
   const params = new URLSearchParams()

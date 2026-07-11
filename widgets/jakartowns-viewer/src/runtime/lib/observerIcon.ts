@@ -1,39 +1,44 @@
 /**
  * lib/observerIcon.ts
  *
- * Reproduit l'"Observer Icon" de @jakarto3d/jakui (composant Vue
- * `V2ObserverIcon`, utilisé par jakassets-viewer pour indiquer la position
- * et l'orientation du panorama sur la carte) : un point en dégradé
- * (position) + un arc en dégradé représentant le champ de vision (fov).
+ * Reproduces the "Observer Icon" from @jakarto3d/jakui (Vue component
+ * `V2ObserverIcon`, used by jakassets-viewer to indicate the panorama's
+ * position and orientation on the map): a gradient dot (position) + a
+ * gradient arc representing the field of view (fov).
  *
- * Géométrie et calculs (dasharray/dashoffset pour dessiner un arc partiel
- * via le cercle plein — technique SVG standard, arc "ombre" à 90% de la
- * longueur de l'arc principal pour un effet de profondeur) portés tels
- * quels depuis le composant compilé de @jakarto3d/jakui
- * (dist/jakui.es.js, fonction `V2ObserverIcon`).
+ * Geometry and math (dasharray/dashoffset to draw a partial arc from a
+ * full circle — a standard SVG technique, with a "shadow" arc at 90% of
+ * the main arc's length for a depth effect) ported as-is from
+ * @jakarto3d/jakui's compiled component (dist/jakui.es.js, function
+ * `V2ObserverIcon`).
  *
- * Le SVG généré ici "pointe vers le haut" (Nord) par défaut ; la rotation
- * par cap n'est PAS incluse dedans — elle est appliquée séparément via
- * `PictureMarkerSymbol.angle` côté ArcGIS (voir widget.tsx), pour ne
- * jamais avoir à régénérer l'image à chaque micro-rotation. Seul un
- * changement de fov nécessite une régénération.
+ * The SVG generated here "points up" (North) by default; heading rotation
+ * is NOT included in it — it's applied separately via ArcGIS's
+ * `PictureMarkerSymbol.angle` (see widget.tsx), so the image never needs
+ * to be regenerated on every micro-rotation. Only a fov change requires
+ * regeneration.
  */
 
-// Jetons --ds-color-observer-* de @jakarto3d/jakui (thème clair, valeurs
-// copiées depuis node_modules/@jakarto3d/jakui/dist/tokens/semantic.css —
-// le paquet lui-même n'est pas chargé dans Experience Builder).
+// --ds-color-observer-* tokens from @jakarto3d/jakui (light theme, values
+// copied from node_modules/@jakarto3d/jakui/dist/tokens/semantic.css — the
+// package itself isn't loaded in Experience Builder).
 const DOT_START = 'hsl(281, 42%, 37%)' // --ds-color-purple-500
 const DOT_END = 'hsl(212, 49%, 38%)' // --ds-color-primary-500
 const ARC_INNER = 'hsl(212, 49%, 38%)' // --ds-color-primary-500
 const ARC_OUTER = 'hsl(133, 32%, 43%)' // --ds-color-green-500
 const ARC_SHADOW = 'hsl(212, 49%, 38%)' // --ds-color-primary-500
 
-// Mêmes valeurs par défaut que V2ObserverIcon.
+// Same defaults as V2ObserverIcon.
 export const OBSERVER_ICON_SIZE = 48
 const DOT_RADIUS = 5
 const ARC_RADIUS = 14
 const STROKE_WIDTH = 6
 export const DEFAULT_OBSERVER_FOV = 60
+// Fraction of a full turn corresponding to "up" (North): used to offset the
+// start of the stroke so the visible arc is centered on it.
+const QUARTER_TURN_RATIO = 0.25
+// The "shadow" arc is slightly shorter than the main arc, for the depth effect.
+const SHADOW_ARC_LENGTH_RATIO = 0.9
 
 export function buildObserverIconSvg(fovDegrees: number): string {
   const half = OBSERVER_ICON_SIZE / 2
@@ -45,13 +50,13 @@ export function buildObserverIconSvg(fovDegrees: number): string {
 
   const circumference = 2 * Math.PI * ARC_RADIUS
   const arcLength = circumference * (fov / 360)
-  // Décale le début du tracé pour centrer l'arc visible sur le "haut" (Nord) :
-  // un quart de tour (0.25) + la moitié de la portion angulaire de l'arc.
-  const dashOffsetMain = circumference * (0.25 + fov / 720)
+  // Offsets the start of the stroke to center the visible arc on "up"
+  // (North): a quarter turn plus half the arc's angular span.
+  const dashOffsetMain = circumference * (QUARTER_TURN_RATIO + fov / 720)
   const gapLength = Math.max(0, circumference - arcLength)
 
-  const shadowArcLength = arcLength * 0.9
-  const shadowDashOffset = circumference * 0.25 + shadowArcLength / 2
+  const shadowArcLength = arcLength * SHADOW_ARC_LENGTH_RATIO
+  const shadowDashOffset = circumference * QUARTER_TURN_RATIO + shadowArcLength / 2
   const shadowGapLength = Math.max(0, circumference - shadowArcLength)
 
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${OBSERVER_ICON_SIZE}" height="${OBSERVER_ICON_SIZE}" viewBox="${-half} ${-half} ${OBSERVER_ICON_SIZE} ${OBSERVER_ICON_SIZE}">

@@ -5,8 +5,8 @@ import { type IMConfig } from '../config'
 import defaultMessages from './translations/default'
 
 const Setting = (props: AllWidgetSettingProps<IMConfig>) => {
-  // onSelect renvoie un tableau simple (string[]), pas un ImmutableArray :
-  // c'est la même forme que WidgetJson.useMapWidgetIds côté framework.
+  // onSelect returns a plain array (string[]), not an ImmutableArray:
+  // same shape as WidgetJson.useMapWidgetIds on the framework side.
   const onMapWidgetSelected = (useMapWidgetIds: string[]) => {
     props.onSettingChange({
       id: props.id,

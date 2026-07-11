@@ -1,15 +1,15 @@
 /*
- * Jetons de couleur repris de @jakarto3d/jakui (design system Jakarto —
- * https://jakui-915503386472.northamerica-northeast1.run.app), pour rester
- * visuellement cohérent avec les autres produits Jakarto. Le paquet lui-même
- * n'est pas chargé dans Experience Builder, donc ces valeurs sont copiées
- * telles quelles depuis ses tokens (dist/tokens/semantic.css) plutôt que
- * référencées via le paquet.
+ * Color tokens taken from @jakarto3d/jakui (Jakarto's design system —
+ * https://jakui-915503386472.northamerica-northeast1.run.app), to stay
+ * visually consistent with other Jakarto products. The package itself
+ * isn't loaded in Experience Builder, so these values are copied as-is
+ * from its tokens (dist/tokens/semantic.css) rather than referenced
+ * through the package.
  */
 .jakartowns-viewer-widget {
-  --jaku-primary-700: hsl(212, 82%, 15%); /* dark navy - barre de titre */
-  --jaku-primary-600: hsl(212, 66%, 25%); /* survol des éléments primaires */
-  --jaku-primary-500: hsl(212, 49%, 38%); /* bleu Jakarto officiel */
+  --jaku-primary-700: hsl(212, 82%, 15%); /* dark navy - title bar */
+  --jaku-primary-600: hsl(212, 66%, 25%); /* hover on primary elements */
+  --jaku-primary-500: hsl(212, 49%, 38%); /* official Jakarto blue */
   --jaku-neutral-900: hsl(40, 6%, 11%);
   --jaku-neutral-200: hsl(31, 7%, 84%);
   --jaku-neutral-50: hsl(29, 8%, 98%);
@@ -25,41 +25,40 @@
 }
 
 /*
- * Le widget occupe tout son emplacement dans la mise en page (souvent bien
- * plus grand que le panneau flottant lui-même, pour lui laisser de la place
- * où se déplacer). Sans ça, ce conteneur entièrement transparent
- * intercepterait quand même les clics destinés à la carte en-dessous sur
- * toute sa surface. Sélecteur à deux classes + !important : une règle
- * générique d'Experience Builder sur `.jimu-widget` (pointer-events: auto
- * par défaut, probablement) pourrait sinon l'emporter selon l'ordre de
- * chargement des feuilles de style.
+ * The widget occupies its entire slot in the layout (often much larger
+ * than the floating panel itself, to leave it room to move around).
+ * Without this, this fully transparent container would still intercept
+ * clicks meant for the map below over its whole surface. Two-class
+ * selector + !important: a generic Experience Builder rule on
+ * `.jimu-widget` (pointer-events: auto by default, presumably) could
+ * otherwise win depending on stylesheet load order.
  */
 .jakartowns-viewer-widget.jimu-widget {
   pointer-events: none !important;
 }
 
 /*
- * Quand ce widget est placé À L'INTÉRIEUR d'un widget Map (comme un
- * contrôle de zoom ou une barre de recherche, plutôt qu'à côté sur la
- * page), Experience Builder force lui-même `.map-is-live-mode .is-widget
- * { pointer-events: auto !important; }` sur le wrapper qu'il ajoute autour
- * de CHAQUE widget enfant du Map — un ou plusieurs niveaux AU-DESSUS de
- * notre propre div. Confirmé dans DevTools : le clic sélectionne
- * `.widget-content` (le wrapper d'ExB), pas notre `.jakartowns-viewer-widget`.
- * Comme le blocage se produit sur des ancêtres qu'on ne contrôle pas (pas
- * de className à leur passer), on les neutralise directement via `:has()`.
+ * When this widget is placed INSIDE a Map widget (like a zoom control or
+ * a search bar, rather than beside it on the page), Experience Builder
+ * itself forces `.map-is-live-mode .is-widget { pointer-events: auto
+ * !important; }` on the wrapper it adds around EVERY child widget of the
+ * Map — one or more levels ABOVE our own div. Confirmed in DevTools: the
+ * click selects `.widget-content` (ExB's wrapper), not our
+ * `.jakartowns-viewer-widget`. Since the blocking happens on ancestors we
+ * don't control (no className to pass them), we neutralize them directly
+ * via `:has()`.
  *
- * ATTENTION : `:has()` cherche un descendant à n'importe quelle profondeur.
- * Le widget Map lui-même est *aussi* enveloppé dans un `.layout-item.is-widget`
- * au niveau de la page (même classes génériques, sans le préfixe `map-`), et
- * notre widget est un descendant (profondément imbriqué) de CE wrapper-là
- * aussi. Une première version de cette règle sans le préfixe `.map-fix-layout`
- * neutralisait donc AUSSI le pointer-events du widget Map entier, bloquant
- * toute la carte (bug constaté par l'utilisateur : plus aucune interaction
- * nulle part sur la carte, même loin du panneau). `.map-fix-layout` est la
- * couche interne du Map (n'existe qu'À L'INTÉRIEUR de la carte, jamais au
- * niveau page) : elle restreint la règle aux seuls widgets réellement
- * imbriqués dans le Map, sans toucher au Map lui-même.
+ * WARNING: `:has()` looks for a descendant at any depth. The Map widget
+ * itself is *also* wrapped in a `.layout-item.is-widget` at the page level
+ * (same generic classes, without the `map-` prefix), and our widget is a
+ * (deeply nested) descendant of THAT wrapper too. An earlier version of
+ * this rule without the `.map-fix-layout` prefix therefore ALSO
+ * neutralized the pointer-events of the entire Map widget, blocking the
+ * whole map (bug reported by the user: no interaction anywhere on the map
+ * anymore, even far from the panel). `.map-fix-layout` is the Map's inner
+ * layer (only exists INSIDE the map, never at the page level): it
+ * restricts the rule to widgets actually nested inside the Map, without
+ * touching the Map itself.
  */
 .map-fix-layout .layout-item.is-widget:has(.jakartowns-viewer-widget),
 .map-fix-layout .layout-item.is-widget:has(.jakartowns-viewer-widget) .animate-wrapper,
@@ -81,7 +80,7 @@
   pointer-events: auto !important;
 }
 
-/* ─── Panneau flottant ──────────────────────────────────────────────── */
+/* ─── Floating panel ──────────────────────────────────────────────────── */
 
 .jakartowns-viewer-panel {
   position: absolute;
@@ -124,9 +123,9 @@
 }
 
 /*
- * Trois zones à flex:1 égal de chaque côté (start/end) : ça centre la zone
- * du milieu (le bouton "Cliquer sur la carte") avec précision, quelle que
- * soit la largeur du titre à gauche ou des icônes à droite.
+ * Three zones with equal flex:1 on each side (start/end): this precisely
+ * centers the middle zone (the "Click on the map" button), whatever the
+ * width of the title on the left or the icons on the right.
  */
 .jakartowns-viewer-panel-titlebar-start,
 .jakartowns-viewer-panel-titlebar-end {
@@ -214,16 +213,16 @@
   position: absolute;
   top: calc(100% + 6px);
   /*
-   * Ancré par la droite (pas la gauche) : le bouton réglages est près du
-   * bord droit du panneau, donc le popover s'ouvre vers l'intérieur au lieu
-   * de déborder à droite — où il se ferait couper par le `overflow: hidden`
-   * du panneau (nécessaire pour ses coins arrondis).
+   * Anchored from the right (not the left): the settings button is near
+   * the panel's right edge, so the popover opens inward instead of
+   * overflowing to the right — where it would get clipped by the panel's
+   * `overflow: hidden` (needed for its rounded corners).
    *
-   * Pas de max-width en % ici : le containing block d'un élément absolute
-   * est son ancêtre positionné le plus proche, ici `.jakartowns-viewer-
-   * settings-anchor`, qui ne fait QUE la largeur du bouton engrenage
-   * (~26px) — un max-width:calc(100%-4px) se résolvait donc contre ces
-   * 26px et écrasait le popover à ~22px de large (texte sur une colonne).
+   * No max-width in % here: an absolutely positioned element's containing
+   * block is its nearest positioned ancestor, here `.jakartowns-viewer-
+   * settings-anchor`, which is ONLY as wide as the gear button (~26px) — a
+   * max-width:calc(100%-4px) would resolve against those 26px and squash
+   * the popover down to ~22px wide (text wrapping to one column).
    */
   right: 0;
   z-index: 30;
@@ -247,11 +246,11 @@
 
 .jakartowns-viewer-panel-body {
   /*
-   * flex:1 — occupe tout l'espace restant sous la barre de titre (qui garde
-   * flex-shrink:0, donc toujours sa taille naturelle). panelSize.height
-   * s'applique au panneau entier (voir widget.tsx), plus à une zone
-   * spécifique : plus de calcul manuel de soustraction, donc plus de risque
-   * de faire déborder/disparaître la barre de titre ou le fil des dates.
+   * flex:1 — occupies all the space remaining below the title bar (which
+   * keeps flex-shrink:0, so always its natural size). panelSize.height
+   * applies to the whole panel (see widget.tsx), not to a specific zone:
+   * no manual subtraction needed, so no risk of the title bar or the date
+   * timeline overflowing/disappearing.
    */
   flex: 1;
   display: flex;
@@ -259,12 +258,12 @@
   min-height: 0;
 }
 
-/* Masque plutôt que démonter (voir commentaire dans widget.tsx) : préserve le canvas Jakartowns entre deux repliages. */
+/* Hidden rather than unmounted (see comment in widget.tsx): preserves the Jakartowns canvas across folds. */
 .jakartowns-viewer-panel-body--hidden {
   display: none;
 }
 
-/* ─── Connexion ─────────────────────────────────────────────────────── */
+/* ─── Login ────────────────────────────────────────────────────────────── */
 
 .jakartowns-viewer-login {
   flex: 1;
@@ -336,7 +335,7 @@
   cursor: not-allowed;
 }
 
-/* ─── Panorama ──────────────────────────────────────────────────────── */
+/* ─── Panorama ─────────────────────────────────────────────────────────── */
 
 .jakartowns-viewer-panorama-area {
   flex: 1;
@@ -367,21 +366,20 @@
 }
 
 /*
- * Jakartowns monte sa propre appli interne dans une div avec id="app",
- * codé en dur par sa librairie, imbriquée dans notre conteneur. Experience
- * Builder a sa propre racine id="app" ailleurs sur la page, et une règle
- * CSS globale la cible avec `display: none` (probablement pour éviter un
- * flash avant hydratation). Les sélecteurs d'ID s'appliquant à TOUT élément
- * portant cet id, cette règle retombe aussi sur la div interne de
- * Jakartowns et la cache. On la neutralise ici avec un sélecteur plus
- * spécifique (classe + id), sans toucher à la vraie racine d'Experience
- * Builder.
+ * Jakartowns mounts its own internal app in a div with id="app", hardcoded
+ * by its library, nested inside our container. Experience Builder has its
+ * own id="app" root elsewhere on the page, and a global CSS rule targets
+ * it with `display: none` (probably to avoid a flash before hydration).
+ * Since ID selectors apply to ANY element with that id, that rule also
+ * lands on Jakartowns' internal div and hides it. We neutralize it here
+ * with a more specific selector (class + id), without touching Experience
+ * Builder's real root.
  */
 .jakartowns-viewer-panorama #app {
   display: flex;
 }
 
-/* ─── Fil des dates (multipass) ────────────────────────────────────── */
+/* ─── Date timeline (multipass) ───────────────────────────────────────── */
 
 .jakartowns-viewer-timeline {
   position: absolute;
@@ -432,7 +430,7 @@
   align-items: center;
   gap: 4px;
   overflow-x: auto;
-  overflow-y: visible; /* laisse les chips grossir vers le haut au survol sans être rognés */
+  overflow-y: visible; /* lets chips grow upward on hover without being clipped */
   scroll-behavior: smooth;
   scrollbar-width: none;
 }
@@ -453,11 +451,10 @@
   cursor: pointer;
   white-space: nowrap;
   /*
-   * Grossit via padding/font-size (pas transform:scale) : ce sont de
-   * vraies propriétés de boîte, flexbox repousse donc naturellement les
-   * chips voisins pour laisser la place, sans le chevauchement que
-   * causait transform:scale (qui grossit juste visuellement, sans
-   * affecter la mise en page).
+   * Grows via padding/font-size (not transform:scale): these are real box
+   * properties, so flexbox naturally pushes neighboring chips aside to
+   * make room, without the overlap that transform:scale caused (it only
+   * grows visually, without affecting layout).
    */
   transition: padding 160ms ease, font-size 160ms ease, background-color 160ms ease;
 }
@@ -473,7 +470,7 @@
   border-color: var(--jaku-primary-500);
 }
 
-/* ─── Poignées de redimensionnement (4 bords + 4 coins) ─────────────── */
+/* ─── Resize handles (4 edges + 4 corners) ───────────────────────────── */
 
 .jakartowns-viewer-resize-handle {
   position: absolute;
