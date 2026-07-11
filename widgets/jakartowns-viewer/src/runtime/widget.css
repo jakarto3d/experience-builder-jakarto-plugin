@@ -1,4 +1,21 @@
+/*
+ * Jetons de couleur repris de @jakarto3d/jakui (design system Jakarto —
+ * https://jakui-915503386472.northamerica-northeast1.run.app), pour rester
+ * visuellement cohérent avec les autres produits Jakarto. Le paquet lui-même
+ * n'est pas chargé dans Experience Builder, donc ces valeurs sont copiées
+ * telles quelles depuis ses tokens (dist/tokens/semantic.css) plutôt que
+ * référencées via le paquet.
+ */
 .jakartowns-viewer-widget {
+  --jaku-primary-700: hsl(212, 82%, 15%); /* dark navy - barre de titre */
+  --jaku-primary-600: hsl(212, 66%, 25%); /* survol des éléments primaires */
+  --jaku-primary-500: hsl(212, 49%, 38%); /* bleu Jakarto officiel */
+  --jaku-neutral-900: hsl(40, 6%, 11%);
+  --jaku-neutral-200: hsl(31, 7%, 84%);
+  --jaku-neutral-50: hsl(29, 8%, 98%);
+  --jaku-red-500: hsl(5, 74%, 42%);
+  --jaku-shadow-lg: 0px 4px 20px rgba(0, 0, 0, 0.12), 0px 2px 6px rgba(0, 0, 0, 0.07);
+
   width: 100%;
   height: 100%;
   min-height: 0;
@@ -75,9 +92,9 @@
   display: flex;
   flex-direction: column;
   pointer-events: auto !important;
-  background: #fff;
+  background: var(--jaku-neutral-50);
   border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2), 0 1px 2px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--jaku-shadow-lg);
   overflow: hidden;
   z-index: 20;
 }
@@ -87,8 +104,8 @@
   align-items: center;
   gap: 8px;
   padding: 8px 8px 8px 12px;
-  background: #0f172a;
-  color: #f8fafc;
+  background: var(--jaku-primary-700);
+  color: var(--jaku-neutral-50);
   cursor: grab;
   user-select: none;
   touch-action: none;
@@ -139,7 +156,7 @@
   border: 1px solid rgba(255, 255, 255, 0.4);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
-  color: #f8fafc;
+  color: var(--jaku-neutral-50);
   font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
@@ -152,8 +169,8 @@
 }
 
 .jakartowns-viewer-picking-btn[aria-pressed="true"] {
-  background: #2f6fed;
-  border-color: #2f6fed;
+  background: var(--jaku-primary-500);
+  border-color: var(--jaku-primary-500);
   color: #fff;
 }
 
@@ -175,7 +192,7 @@
 }
 
 .jakartowns-viewer-icon-btn[aria-pressed="true"] {
-  background: #2f6fed;
+  background: var(--jaku-primary-500);
   color: #fff;
 }
 
@@ -207,10 +224,10 @@
   z-index: 30;
   width: 240px;
   padding: 10px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--jaku-neutral-50);
+  color: var(--jaku-neutral-900);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.25);
+  box-shadow: var(--jaku-shadow-lg);
   cursor: default;
 }
 
@@ -248,11 +265,11 @@
   margin-bottom: 1rem;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--jaku-neutral-900);
 }
 
 .jakartowns-viewer-login-error {
-  color: #d13438;
+  color: var(--jaku-red-500);
   font-size: 0.8rem;
   margin-bottom: 0.75rem;
   text-align: center;
@@ -268,12 +285,12 @@
 
 .jakartowns-viewer-login-label {
   font-size: 0.8rem;
-  color: #0f172a;
+  color: var(--jaku-neutral-900);
 }
 
 .jakartowns-viewer-login-input {
   padding: 0.5rem 0.75rem;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--jaku-neutral-200);
   border-radius: 6px;
   font-size: 0.9rem;
 }
@@ -290,8 +307,12 @@
   border-radius: 6px;
   font-weight: 600;
   cursor: pointer;
-  background: #2f6fed;
+  background: var(--jaku-primary-500);
   color: #fff;
+}
+
+.jakartowns-viewer-login-btn:hover:not(:disabled) {
+  background: var(--jaku-primary-600);
 }
 
 .jakartowns-viewer-login-btn:disabled {
@@ -337,15 +358,15 @@
   z-index: 5;
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px 2px;
+  gap: 4px;
+  padding: 6px 4px;
   background: linear-gradient(to top, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0));
 }
 
 .jakartowns-viewer-timeline-arrow {
   flex-shrink: 0;
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -353,7 +374,7 @@
   border-radius: 999px;
   background: rgba(15, 23, 42, 0.55);
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -375,6 +396,7 @@
   flex: 1;
   min-width: 0;
   display: flex;
+  align-items: center;
   gap: 4px;
   overflow-x: auto;
   scroll-behavior: smooth;
@@ -409,8 +431,8 @@
 }
 
 .jakartowns-viewer-multipass-chip.is-selected {
-  background: #2f6fed;
-  border-color: #2f6fed;
+  background: var(--jaku-primary-500);
+  border-color: var(--jaku-primary-500);
 }
 
 /* ─── Poignées de redimensionnement (4 bords + 4 coins) ─────────────── */

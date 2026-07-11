@@ -1,5 +1,5 @@
 import { React, type AllWidgetProps } from 'jimu-core'
-import { JimuMapViewComponent, type JimuMapView } from 'jimu-arcgis'
+import { JimuMapViewComponent, loadArcGISJSAPIModules, type JimuMapView } from 'jimu-arcgis'
 import { type IMConfig } from '../config'
 import {
   getStoredApiKey,
@@ -14,7 +14,6 @@ import {
   type JakartoMultipassImage,
   type JakartoWidgetSettings
 } from './services/jakarto'
-import { useSpatialSync } from './hooks/useSpatialSync'
 import defaultMessages from './translations/default'
 import './widget.css'
 
@@ -29,6 +28,21 @@ const PANEL_MARGIN = 12
 // qui peut renvoyer 0 si l'effet se déclenche avant que le layout ne se
 // stabilise — ça avait fait déborder le panneau et masqué le fil des dates.
 const TITLEBAR_HEIGHT = 42
+// Bleu Jakarto officiel (--ds-color-primary-500 de @jakarto3d/jakui).
+const OBSERVER_MARKER_COLOR = 'hsl(212, 49%, 38%)'
+
+/**
+ * Convertit le pan Jakartowns (0 = Nord, sens antihoraire — voir
+ * buildJakartownsUrl) en un angle de rotation pour un symbole ArcGIS
+ * (`SimpleMarkerSymbol.angle`), supposé exprimé en degrés sens horaire
+ * depuis le Nord — convention standard pour les flèches de cap. Non
+ * vérifié visuellement : si la flèche pointe à l'envers une fois testée,
+ * inverser le signe ici.
+ */
+function jakartownsPanToMarkerAngle(panRadians: number): number {
+  const degrees = 360 - (panRadians * 180) / Math.PI
+  return ((degrees % 360) + 360) % 360
+}
 
 interface DragState {
   pointerId: number
@@ -198,7 +212,14 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const [isPickingEnabled, setIsPickingEnabled] = React.useState(false)
   const isPickingEnabledRef = React.useRef(false)
 
-  const spatialSync = useSpatialSync()
+  // Indicateur de position/orientation sur la carte liée (voir l'effet plus
+  // bas). arcgisModulesRef garde Graphic pour ne le charger qu'une fois ;
+  // positionGraphicRef est le graphic unique qu'on repositionne/réoriente au
+  // lieu d'en recréer un à chaque mise à jour.
+  const arcgisModulesRef = React.useRef<{ Graphic: any } | null>(null)
+  const positionGraphicsLayerRef = React.useRef<any>(null)
+  const positionGraphicRef = React.useRef<any>(null)
+  const lastKnownPositionRef = React.useRef<JakartoPosition | null>(null)
 
   const onActiveViewChange = React.useCallback((view: JimuMapView) => {
     setJimuMapView(view)
@@ -283,6 +304,61 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     window.open(url, '_blank', 'noopener,noreferrer')
   }
 
+  // Crée la couche accueillant l'indicateur de position/orientation, une
+  // fois par vue de carte. Ne dépend d'aucune donnée Jakarto (juste
+  // GraphicsLayer/Graphic d'ArcGIS) : pas de souci d'auth cross-origin ici,
+  // contrairement à la couche jakman (retirée).
+  React.useEffect(() => {
+    const view = jimuMapView?.view
+    if (!view) return
+
+    let cancelled = false
+    loadArcGISJSAPIModules(['esri/layers/GraphicsLayer', 'esri/Graphic']).then(([GraphicsLayer, Graphic]) => {
+      if (cancelled) return
+      arcgisModulesRef.current = { Graphic }
+      const layer = new GraphicsLayer({ listMode: 'hide' })
+      positionGraphicsLayerRef.current = layer
+      view.map.add(layer)
+    })
+
+    return () => {
+      cancelled = true
+      if (positionGraphicsLayerRef.current) {
+        view.map.remove(positionGraphicsLayerRef.current)
+        positionGraphicsLayerRef.current = null
+      }
+      positionGraphicRef.current = null
+    }
+  }, [jimuMapView])
+
+  // Déplace/réoriente le graphic existant plutôt que d'en recréer un à
+  // chaque appel (moins coûteux, utile vu la fréquence des événements
+  // `rotation`).
+  const updatePositionMarker = React.useCallback((position: JakartoPosition, panRadians: number | null) => {
+    const modules = arcgisModulesRef.current
+    const layer = positionGraphicsLayerRef.current
+    if (!modules || !layer) return
+
+    const symbol = {
+      type: 'simple-marker',
+      style: 'triangle',
+      size: 14,
+      color: OBSERVER_MARKER_COLOR,
+      outline: { color: '#ffffff', width: 1.5 },
+      angle: panRadians != null ? jakartownsPanToMarkerAngle(panRadians) : 0
+    }
+    const geometry = { type: 'point', latitude: position.latitude, longitude: position.longitude }
+
+    if (positionGraphicRef.current) {
+      positionGraphicRef.current.geometry = geometry
+      positionGraphicRef.current.symbol = symbol
+    } else {
+      const graphic = new modules.Graphic({ geometry, symbol })
+      positionGraphicRef.current = graphic
+      layer.add(graphic)
+    }
+  }, [])
+
   // Initialise le viewer Jakartowns une fois authentifié et le conteneur monté.
   React.useEffect(() => {
     if (!isAuthenticated || !viewerContainerRef.current) return
@@ -294,18 +370,25 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     initializeViewer(viewerContainerRef.current, {
       latitude: center?.latitude ?? config.fallbackLatitude,
       longitude: center?.longitude ?? config.fallbackLongitude,
+      // Ne recentre plus la carte au changement d'image/position dans le
+      // panorama (comportement jugé trop intrusif) : seul l'indicateur sur
+      // la carte se met à jour, la vue de l'utilisateur reste sous son
+      // contrôle.
       onViewChange: (state) => {
         if (state.latitude != null && state.longitude != null) {
           const position = { latitude: state.latitude, longitude: state.longitude }
           setCurrentPosition(position)
-          spatialSync.onJakartoNavigate(position, (p) => {
-            const activeView = jimuMapViewRef.current?.view
-            activeView?.goTo({ center: [p.longitude, p.latitude] }, { duration: 600 })
-          })
+          lastKnownPositionRef.current = position
+          updatePositionMarker(position, state.pan)
         }
         setCurrentDate(state.date)
         setCurrentImageId(state.imageId)
         setAvailableImages(state.availableImages)
+      },
+      onOrientationChange: (pan) => {
+        if (lastKnownPositionRef.current) {
+          updatePositionMarker(lastKnownPositionRef.current, pan)
+        }
       }
     }).then((handle) => {
       if (cancelled) {
@@ -336,9 +419,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       if (!mapPoint) return
       const position = { latitude: mapPoint.latitude, longitude: mapPoint.longitude }
       setCurrentPosition(position)
-      spatialSync.onMapClick(position, (p) => {
-        viewerHandleRef.current?.setPosition(p)
-      })
+      viewerHandleRef.current?.setPosition(position)
     }
 
     const clickHandle = view.on('click', (event) => {
@@ -360,7 +441,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       clickHandle.remove()
       view.container?.removeEventListener('contextmenu', onContextMenu)
     }
-  }, [jimuMapView, spatialSync, settings.rightClickToLocate])
+  }, [jimuMapView, settings.rightClickToLocate])
 
   const handleTitleBarPointerDown = (event: React.PointerEvent) => {
     // Sans ce garde-fou, cliquer sur un bouton de la barre de titre (déconnexion,

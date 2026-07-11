@@ -2,6 +2,40 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Palette Jakarto, indicateur de position/orientation, arrêt du recentrage automatique
+
+- **Palette de couleurs Jakarto** : les tokens du design system
+  (`@jakarto3d/jakui`) trouvés directement dans les dépendances de
+  `jakassets-viewer` (`node_modules/@jakarto3d/jakui/dist/tokens/*.css`,
+  package non chargé dans Experience Builder donc valeurs copiées telles
+  quelles). Bleu Jakarto officiel `hsl(212, 49%, 38%)`
+  (`--ds-color-primary-500`), navy `hsl(212, 82%, 15%)` pour la barre de
+  titre, échelle neutre/rouge pour texte/bordures/erreurs. Remplace les
+  couleurs ad hoc (`#2f6fed`, `#0f172a`, `#d13438`…) utilisées jusque-là.
+- **Fil des dates** : flèches agrandies (22px → 32px, taille de cible
+  tactile plus conforme aux recommandations UI/UX usuelles) ; l'alignement
+  vertical avec les chips était déjà géré par `align-items: center` sur le
+  conteneur flex, confirmé/conservé explicitement sur la liste aussi.
+- **Arrêt du recentrage automatique de la carte** : la carte ne suit plus
+  la position du panorama (changement d'image via l'API ou clic dans le fil
+  des dates) — jugé trop intrusif, l'utilisateur garde le contrôle de sa
+  vue. `useSpatialSync` (son anti-rebond n'avait plus d'utilité une fois la
+  boucle carte↔Jakartowns supprimée) et `hooks/useSpatialSync.ts` retirés :
+  le clic carte → Jakartowns reste la seule synchronisation active, appelée
+  directement sans plus passer par un hook dédié.
+- **Indicateur de position/orientation sur la carte** : un `GraphicsLayer`
+  ArcGIS (chargé dynamiquement, comme pour jakman, mais celui-ci n'a besoin
+  d'aucune requête vers un serveur Jakarto — aucun souci d'auth cross-origin
+  possible) héberge un unique `Graphic` (triangle bleu Jakarto, contour
+  blanc) repositionné/réorienté à chaque événement `position` et `rotation`
+  du viewer, plutôt que recréé. **Non vérifié visuellement** : la
+  conversion du pan Jakartowns vers l'angle de rotation ArcGIS
+  (`jakartownsPanToMarkerAngle`) suppose que `SimpleMarkerSymbol.angle` est
+  exprimé en degrés sens horaire depuis le Nord (convention standard pour
+  les flèches de cap, mais pas confirmée sur le SDK ArcGIS) — si la flèche
+  pointe à l'envers une fois testée, il suffira d'inverser le signe dans
+  cette fonction.
+
 ## 2026-07-10 — Couche jakman retirée (limitation cross-origin du cookie Jakarto), fix du remplissage par défaut, barre de titre repensée
 
 - **Couche jakman retirée.** Testée en conditions réelles : la requête vers

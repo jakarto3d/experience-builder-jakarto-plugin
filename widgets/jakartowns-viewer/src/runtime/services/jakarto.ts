@@ -227,6 +227,12 @@ export interface InitializeViewerOptions {
   longitude?: number
   /** Appelé à chaque changement de position/image (événement `position`). */
   onViewChange?: (state: JakartoViewState) => void
+  /**
+   * Appelé à chaque rotation (peut être fréquent pendant un glisser dans le
+   * panorama) — séparé de `onViewChange` pour permettre de mettre à jour un
+   * indicateur d'orientation sans déclencher de re-render React à chaque tick.
+   */
+  onOrientationChange?: (pan: number) => void
 }
 
 export interface JakartoViewerHandle {
@@ -306,10 +312,13 @@ export async function initializeViewer(
 
         // pan/tilt/fov ne sont utiles qu'au moment de construire l'URL "Ouvrir
         // dans Jakartowns" (via getViewState()) : on les garde en interne
-        // sans déclencher de callback React à chaque micro-rotation.
+        // sans déclencher de callback React à chaque micro-rotation, sauf
+        // onOrientationChange (dédié, léger) pour l'indicateur sur la carte.
         const onRotationEvent = (event: Event) => {
           if (destroyed) return
-          state.pan = (event as CustomEvent<number>).detail
+          const pan = (event as CustomEvent<number>).detail
+          state.pan = pan
+          options.onOrientationChange?.(pan)
         }
         window.addEventListener('rotation', onRotationEvent)
 
