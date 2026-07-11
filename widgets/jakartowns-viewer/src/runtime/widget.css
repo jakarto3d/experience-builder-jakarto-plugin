@@ -443,7 +443,6 @@
 
 .jakartowns-viewer-multipass-chip {
   flex-shrink: 0;
-  position: relative; /* nécessaire pour que z-index élève le chip survolé au-dessus de ses voisins */
   padding: 3px 8px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
@@ -453,22 +452,20 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transform: scale(1);
-  transform-origin: bottom center;
-  transition: transform 160ms ease, background-color 160ms ease;
+  /*
+   * Grossit via padding/font-size (pas transform:scale) : ce sont de
+   * vraies propriétés de boîte, flexbox repousse donc naturellement les
+   * chips voisins pour laisser la place, sans le chevauchement que
+   * causait transform:scale (qui grossit juste visuellement, sans
+   * affecter la mise en page).
+   */
+  transition: padding 160ms ease, font-size 160ms ease, background-color 160ms ease;
 }
 
-/* Effet façon dock macOS : le chip survolé grossit (pas de rebond), et ses
-   voisins immédiats grossissent un peu aussi, en dégradé. */
 .jakartowns-viewer-multipass-chip:hover {
+  padding: 5px 12px;
+  font-size: 0.8rem;
   background: rgba(15, 23, 42, 0.85);
-  transform: scale(1.22);
-  z-index: 1;
-}
-
-.jakartowns-viewer-multipass-chip:has(+ .jakartowns-viewer-multipass-chip:hover),
-.jakartowns-viewer-multipass-chip:hover + .jakartowns-viewer-multipass-chip {
-  transform: scale(1.1);
 }
 
 .jakartowns-viewer-multipass-chip.is-selected {
