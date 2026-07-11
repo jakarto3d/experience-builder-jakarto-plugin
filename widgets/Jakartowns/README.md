@@ -1,113 +1,80 @@
-# Widget Experience Builder — Jakartowns Viewer
+# Experience Builder Widget — Jakartowns Viewer
 
-Widget custom qui affiche le panorama **Jakartowns** dans un panneau
-flottant, synchronisé avec un widget **Map** d'ArcGIS Experience Builder.
+Custom widget that displays the **Jakartowns** panorama in a floating
+panel, synced with an ArcGIS Experience Builder **Map** widget.
 
-## Statut
+## Status
 
-Testé de bout en bout dans une vraie Developer Edition ArcGIS Experience
-Builder : authentification, rendu du panorama et synchronisation
-bidirectionnelle avec la carte fonctionnent. Voir
-[`docs/progress.md`](../../docs/progress.md) à la racine du dépôt pour le
-journal détaillé de chaque étape (bugs trouvés et corrigés en cours de
-route).
+Tested end-to-end in a real ArcGIS Experience Builder Developer Edition:
+authentication, panorama rendering, and bidirectional sync with the map all
+work. See [`docs/`](../../docs/README.md) at the repo root for architecture
+decisions (ADR) and the widget's up-to-date specs, and
+[`docs/known-issues.md`](../../docs/known-issues.md) for the current list
+of points still to verify (authentication behavior on the real portal
+domain, right-click conflicts with other widgets, floating panel at
+reduced size, etc.).
 
-### Checklist restant à vérifier
+## Installing in an ArcGIS Experience Builder Developer Edition
 
-- [ ] Comportement de l'authentification (clé API + cookie de session) une
-      fois hébergé sous le domaine réel du portail (`sig.mascouche.ca`)
-      plutôt que `localhost` — le CORS sur `account.jakarto.com` pourrait se
-      comporter différemment.
-- [ ] Le clic droit sur la carte (mode de repérage rapide) n'entre pas en
-      conflit avec un menu contextuel d'un autre widget déjà présent sur la
-      même carte.
-- [ ] Le panneau flottant reste utilisable dans les tailles réduites du
-      widget (voir `defaultSize` dans `manifest.json`).
+This folder is **not** a standalone buildable project: it must be copied
+into the web extension repo of an existing Developer Edition installation.
 
-## Installation dans une ArcGIS Experience Builder Developer Edition
-
-Ce dossier n'est **pas** un projet buildable en autonomie : il doit être
-copié dans le web extension repo d'une installation Developer Edition
-existante.
-
-> **Vidéo utile pour l'installation** : [Set up ArcGIS Experience Builder Developer Edition](https://www.youtube.com/watch?v=YLBxBio96a8)
-> — les 20 premières minutes en particulier ont servi à installer
-> l'environnement local (fonctionne aussi sur Linux, pas seulement Windows).
-> Suivre les étapes de la vidéo dans l'ordre, sans en sauter.
+> **Useful video for installation**: [Set up ArcGIS Experience Builder Developer Edition](https://www.youtube.com/watch?v=YLBxBio96a8)
+> — the first 20 minutes in particular were used to set up the local
+> environment (also works on Linux, not just Windows). Follow the video's
+> steps in order, without skipping any.
 >
-> Pour l'étape OAuth de la vidéo : utiliser un compte ArcGIS Online existant
-> (ici, `https://jakarto.maps.arcgis.com/`) plutôt que d'en créer un
-> nouveau, et choisir le type **"OAuth 2.0 credentials - For user
-> authentication"** pour les identifiants de l'application.
+> For the video's OAuth step: use an existing ArcGIS Online account (here,
+> `https://jakarto.maps.arcgis.com/`) rather than creating a new one, and
+> choose the **"OAuth 2.0 credentials - For user authentication"** type for
+> the application credentials.
 
-1. Télécharger/installer ArcGIS Experience Builder Developer Edition (voir la
-   documentation Esri officielle : https://developers.arcgis.com/experience-builder/guide/getting-started-widget/).
-2. Copier ce dossier entier (`jakartowns-viewer/`) dans :
+1. Download/install ArcGIS Experience Builder Developer Edition (see the
+   official Esri documentation: https://developers.arcgis.com/experience-builder/guide/getting-started-widget/).
+2. Copy this entire folder (`Jakartowns/`) into:
    ```
-   <installation-exb>/client/your-extensions/widgets/jakartowns-viewer/
+   <exb-installation>/client/your-extensions/widgets/Jakartowns/
    ```
-3. Depuis `<installation-exb>/client`, lancer `npm start` (redémarrer le
-   serveur de dev si un `manifest.json`/`config.json` a changé — seuls les
-   fichiers `.ts`/`.tsx`/`.css` sont repris à chaud).
-   Si `npm start` échoue avec une erreur du genre `Cannot find module
-   'tinyglobby'`, forcer la version de Node avec
-   [fnm](https://github.com/Schniz/fnm) : `fnm exec --using v20.20.2 npm run start`.
-4. Ouvrir le builder ExB local, ajouter le widget **Jakartowns Viewer** à une
-   page contenant déjà un widget **Map**.
-5. Dans les réglages du widget, sélectionner le widget Map à lier
-   (`Carte liée`).
+3. From `<exb-installation>/client`, run `npm start` (restart the dev
+   server if a `manifest.json`/`config.json` changed — only
+   `.ts`/`.tsx`/`.css` files are hot-reloaded).
+   If `npm start` fails with an error like `Cannot find module
+   'tinyglobby'`, force the Node version with
+   [fnm](https://github.com/Schniz/fnm): `fnm exec --using v20.20.2 npm run start`.
+4. Open the local ExB builder, add the **Jakartowns Viewer** widget to a
+   page that already contains a **Map** widget.
+5. In the widget settings, select the Map widget to bind to (`Linked map`).
 
-## Utilisation
+## Usage
 
-- Un visiteur doit renseigner sa propre clé d'API Jakarto (récupérable sur
-  https://solutions.jakarto.com/profile) — décision produit : pas de clé
-  partagée par défaut. Cette clé est mise en cache dans le `localStorage` du
-  navigateur après une connexion réussie, pour éviter d'avoir à la ressaisir
-  à chaque visite (le endpoint de vérification de session est bloqué par
-  CORS depuis la plupart des origines, on ne peut donc pas s'y fier pour
-  détecter une session déjà active). Compromis assumé : la clé est stockée
-  en clair côté navigateur, pas chiffrée.
-- Le panorama vit dans un **panneau flottant** au-dessus de la carte :
-  - Repliable/dépliable via le bouton chevron de la barre de titre.
-  - Déplaçable en le faisant glisser par sa barre de titre (limité aux
-    bords du widget).
-- Deux façons de pointer un endroit sur la carte liée :
-  - **Mode pointage** : cliquer sur le bouton "Cliquer sur la carte" puis
-    sur la carte — se désarme automatiquement après usage (évite que
-    chaque clic sur la carte, y compris ceux destinés à d'autres outils,
-    ne déplace le panorama).
-  - **Clic droit** sur la carte : fonctionne à tout moment, sans rien armer.
-- La **date de l'image actuellement affichée** est visible en overlay sur le
-  panorama. Si plusieurs captures existent au même endroit (multipass), une
-  liste de dates apparaît pour basculer entre elles.
-- Le bouton **"Ouvrir dans Jakartowns ↗"** ouvre `maps.jakarto.com` dans un
-  nouvel onglet sur **l'image exacte actuellement affichée** (via son
-  identifiant technique, pas seulement lat/lng) — fonctionne aussi comme
-  repli si l'intégration embarquée ne s'authentifie pas correctement.
+- A visitor must provide their own Jakarto API key (obtainable from
+  https://solutions.jakarto.com/profile) — product decision: no shared
+  default key. This key is cached in the browser's `localStorage` after a
+  successful login, to avoid re-entering it on every visit (the session
+  verification endpoint is blocked by CORS from most origins, so it can't
+  be relied on to detect an already-active session). Accepted trade-off:
+  the key is stored in plain text on the browser side, not encrypted.
+- The panorama lives in a **floating panel** above the map:
+  - Collapsible/expandable via the chevron button in the title bar.
+  - Movable by dragging its title bar (constrained to the widget's edges).
+- Two ways to pick a location on the linked map:
+  - **Picking mode**: click the "Click on map" button, then click on the
+    map — automatically disarms itself after use (avoids every click on
+    the map, including ones meant for other tools, moving the panorama).
+  - **Right-click** on the map: works at any time, without arming anything.
+- The **date of the currently displayed image** is shown as an overlay on
+  the panorama. If several captures exist at the same location (multipass),
+  a list of dates appears to switch between them.
+- The **"Open in Jakartowns ↗"** button opens `maps.jakarto.com` in a new
+  tab on **the exact image currently displayed** (via its technical
+  identifier, not just lat/lng) — also serves as a fallback if the embedded
+  integration fails to authenticate correctly.
 
-## Limitations connues
+## Known limitations and future directions
 
-- La clé API est stockée en clair dans `localStorage` (voir plus haut) —
-  compromis accepté pour contourner le CORS bloquant sur la vérification de
-  session.
-- Les événements de navigation Jakartowns (`position`, `rotation`, `tilt`,
-  `fov`) sont dispatchés sur `window`, pas scopés par instance : deux
-  widgets Jakartowns simultanés sur la même page recevraient les
-  événements l'un de l'autre. Limitation de la librairie Jakartowns
-  elle-même, pas quelque chose qu'on peut corriger côté widget.
-- Le panneau flottant est limité aux bords du widget (pas de "vrai" mode
-  Picture-in-Picture qui sortirait le panorama de la fenêtre du navigateur)
-  — voir "Pistes futures" ci-dessous.
-
-## Pistes futures (hors scope actuel)
-
-- **Picture-in-Picture réel** (faire sortir le panneau de la fenêtre du
-  navigateur, pas seulement le déplacer dans les limites du widget) : l'API
-  `documentPictureInPicture` du navigateur (Chrome/Edge) le permettrait,
-  mais elle déplace réellement le nœud DOM dans un autre `document` — un
-  risque concret de perte du contexte WebGL du canvas Jakartowns au passage.
-  Pas tenté dans cette itération pour cette raison ; à explorer séparément
-  si le besoin se confirme.
-- Publier une **Message Action** (`publishMessages` dans `manifest.json`)
-  quand la position Jakartowns change, pour que d'autres widgets de la page
-  (pas seulement la carte liée) puissent réagir sans couplage direct.
+Accepted decisions and trade-offs (plain-text API key in `localStorage`,
+global Jakartowns events on `window`, no real Picture-in-Picture, no
+published Message Action): see [`../../docs/adr/`](../../docs/README.md)
+for the detail of each decision, and
+[`../../docs/known-issues.md`](../../docs/known-issues.md) for what still
+needs to be verified in a real environment.

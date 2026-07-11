@@ -1,28 +1,41 @@
 # Jakarto × ArcGIS Experience Builder
 
-Widget custom pour **ArcGIS Experience Builder** permettant de consulter le
-panorama **Jakartowns** en synchronisation avec une carte ArcGIS, directement
-depuis une expérience ArcGIS (ex. `sig.mascouche.ca`).
+Custom widget for **ArcGIS Experience Builder** that displays the
+**Jakartowns** panorama in sync with an ArcGIS map, directly from an ArcGIS
+experience (e.g. `sig.mascouche.ca`).
 
-## Contenu du dépôt
+## Repository contents
 
-| Dossier | Rôle |
+| Folder | Role |
 |---|---|
-| [`widgets/Jakartowns/`](widgets/Jakartowns/) | Le widget Experience Builder en cours de développement (livrable principal). |
-| [`docs/`](docs/) | Notes de recherche et journal d'avancement. |
+| [`widgets/Jakartowns/`](widgets/Jakartowns/) | The Experience Builder widget under development (main deliverable). |
+| [`docs/`](docs/) | Architecture decisions (ADR) and widget specifications. |
 
-## État d'avancement
+## Progress
 
-Voir [`docs/progress.md`](docs/progress.md) pour le journal détaillé, et
-[`widgets/Jakartowns/README.md`](widgets/Jakartowns/README.md)
-pour l'état du widget et les instructions d'installation/test dans une
-ArcGIS Experience Builder Developer Edition.
+See [`widgets/Jakartowns/README.md`](widgets/Jakartowns/README.md) for the
+widget's status and install/test instructions in an ArcGIS Experience
+Builder Developer Edition, and
+[`docs/known-issues.md`](docs/known-issues.md) for the points still to
+verify in a real environment.
 
-## Contexte
+## Context and architecture choices
 
-Voir [`docs/research-experience-builder.md`](docs/research-experience-builder.md)
-et [`docs/research-jakartowns-api.md`](docs/research-jakartowns-api.md) pour
-les recherches qui fondent les choix d'architecture.
+The technical documentation follows an ADR (Architecture Decision Records) +
+living specs approach — see [`docs/README.md`](docs/README.md) for the full
+index. In short:
 
-Ressource externe utile : [Getting started with widget development](https://developers.arcgis.com/experience-builder/guide/getting-started-widget/)
+- [`docs/specs/architecture.md`](docs/specs/architecture.md) — widget
+  structure and binding to a Map widget.
+- [`docs/specs/jakartowns-integration.md`](docs/specs/jakartowns-integration.md) —
+  authentication, Jakartowns JS/URL API.
+- [`docs/specs/interaction-behavior.md`](docs/specs/interaction-behavior.md) —
+  floating panel behavior, picking mode, date timeline.
+- [`docs/adr/`](docs/adr/) — architecture decision history (context,
+  decision, consequences), including choices that were later reverted.
+
+The detailed day-by-day change history remains available via `git log`
+(convention `feat(widget)`/`fix(widget)`/`docs`).
+
+Useful external resource: [Getting started with widget development](https://developers.arcgis.com/experience-builder/guide/getting-started-widget/)
 (ArcGIS Experience Builder Developer Guide).
