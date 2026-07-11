@@ -2,6 +2,28 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Plus de chargement automatique d'un panorama par défaut
+
+Retour utilisateur : au premier chargement, Jakartowns semblait
+"téléporter" la vue loin de la zone de travail (observé : vers l'extrême
+ouest de l'Ontario, la donnée Jakarto la plus à l'ouest disponible), sans
+repère clair de la position réellement demandée. Cause probable : on
+passait toujours une position initiale au viewer (centre de la carte liée,
+ou à défaut `config.fallbackLatitude/Longitude`), et cette position pouvait
+tomber loin de toute couverture Jakarto (qui ne couvre que l'est du
+Canada) — Jakartowns semble alors se rabattre sur le point de données
+disponible le plus proche, indépendamment de la distance réelle. Piste
+retenue comme cause probable aussi du fil des dates resté vide au premier
+chargement (`currentSphereInfo` peut-être absent/inattendu sur cet
+événement de repli).
+
+**Fix** : `initializeViewer()` ne reçoit plus de position par défaut — le
+viewer se monte "vide" (pas d'appel `setPosition` initial) tant que
+l'utilisateur n'a pas cliqué explicitement (mode pointage ou clic droit).
+Un message d'attente (`.jakartowns-viewer-panorama-waiting`) s'affiche en
+overlay sur la zone du panorama tant qu'aucune image n'est chargée
+(`!currentImageId`), invitant à cliquer sur « Cliquer sur la carte ».
+
 ## 2026-07-10 — Réplique fidèle de l'ObserverIcon de jakui (point + arc de fov)
 
 Demande utilisateur : remplacer le triangle bleu improvisé par une réplique

@@ -18,5 +18,6 @@ export default {
   timelineScrollPrevious: 'Dates précédentes',
   timelineScrollNext: 'Dates suivantes',
   settingsLabel: 'Réglages',
-  settingsRightClickLabel: 'Activer le clic droit sur la carte pour localiser le panorama'
+  settingsRightClickLabel: 'Activer le clic droit sur la carte pour localiser le panorama',
+  panoramaWaitingForPick: 'Cliquez sur « Cliquer sur la carte », puis sur la carte, pour afficher un panorama Jakartowns.'
 }

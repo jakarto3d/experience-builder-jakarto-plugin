@@ -389,12 +389,20 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     if (!isAuthenticated || !viewerContainerRef.current) return
 
     let cancelled = false
-    const view = jimuMapViewRef.current?.view
-    const center = view?.center
 
+    // Ne charge aucun panorama par défaut : sans repère fiable de l'endroit
+    // où Jakarto a des données (le centre de la carte ou une position de
+    // repli arbitraire peuvent tomber loin de toute couverture), Jakartowns
+    // semblait "téléporter" la vue vers le point de données disponible le
+    // plus proche (observé : bien à l'ouest de l'Ontario, la donnée la plus
+    // à l'ouest de Jakarto) — déroutant, et source probable du fil des
+    // dates resté vide au premier chargement. On ne passe une position
+    // initiale que si l'utilisateur en a déjà choisi une dans cette session
+    // (ex. déconnexion/reconnexion après un premier clic) ; sinon le viewer
+    // se monte "vide" jusqu'au premier clic sur la carte (mode pointage ou
+    // clic droit).
     initializeViewer(viewerContainerRef.current, {
-      latitude: center?.latitude ?? config.fallbackLatitude,
-      longitude: center?.longitude ?? config.fallbackLongitude,
+      ...(currentPosition ? { latitude: currentPosition.latitude, longitude: currentPosition.longitude } : {}),
       // Ne recentre plus la carte au changement d'image/position dans le
       // panorama (comportement jugé trop intrusif) : seul l'indicateur sur
       // la carte se met à jour, la vue de l'utilisateur reste sous son
@@ -760,6 +768,12 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             {isAuthenticated && (
               <div className="jakartowns-viewer-panorama-area">
                 <div ref={viewerContainerRef} className="jakartowns-viewer-panorama" />
+
+                {!currentImageId && (
+                  <div className="jakartowns-viewer-panorama-waiting">
+                    {defaultMessages.panoramaWaitingForPick}
+                  </div>
+                )}
 
                 {timelineEntries.length > 0 && (
                   <div className="jakartowns-viewer-timeline">
