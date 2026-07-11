@@ -2,6 +2,28 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Deux régressions du commit précédent : popover réglages écrasé, repli laissant un vide
+
+Deux bugs, tous deux introduits par mes propres fixes précédents :
+
+- **Popover de réglages écrasé** (texte sur une seule colonne étroite) :
+  `max-width: calc(100% - 4px)` s'était glissé dans
+  `.jakartowns-viewer-settings-popover` lors d'un fix antérieur (le
+  débordement à droite). Or le containing block d'un élément `position:
+  absolute` est son ancêtre positionné le plus proche —
+  `.jakartowns-viewer-settings-anchor`, qui ne fait que la largeur du
+  bouton engrenage (~26px). Le `max-width` en `%` se résolvait donc contre
+  ces ~26px, écrasant le popover à ~22px de large. Retiré : `width: 240px`
+  suffit, `right: 0` empêche déjà le débordement.
+- **Repli laissant un grand vide** : conséquence directe du fix du commit
+  précédent (hauteur totale posée sur `.jakartowns-viewer-panel` en style
+  inline). Une fois replié, `panel-body` passe en `display: none` mais la
+  hauteur inline fixe ne s'ajuste pas toute seule au contenu — le panneau
+  gardait sa hauteur dépliée, avec un grand espace vide sous la barre de
+  titre désormais seule visible. Fix : la hauteur n'est appliquée que
+  lorsque `!isPanelFolded` ; repliée, le panneau reprend sa hauteur
+  naturelle (juste la barre de titre).
+
 ## 2026-07-10 — Consolidation du layout : la barre de titre et le fil des dates ne peuvent plus disparaître
 
 Retour utilisateur : après un redimensionnement, la barre de titre et le

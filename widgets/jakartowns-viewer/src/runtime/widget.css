@@ -218,9 +218,14 @@
    * bord droit du panneau, donc le popover s'ouvre vers l'intérieur au lieu
    * de déborder à droite — où il se ferait couper par le `overflow: hidden`
    * du panneau (nécessaire pour ses coins arrondis).
+   *
+   * Pas de max-width en % ici : le containing block d'un élément absolute
+   * est son ancêtre positionné le plus proche, ici `.jakartowns-viewer-
+   * settings-anchor`, qui ne fait QUE la largeur du bouton engrenage
+   * (~26px) — un max-width:calc(100%-4px) se résolvait donc contre ces
+   * 26px et écrasait le popover à ~22px de large (texte sur une colonne).
    */
   right: 0;
-  max-width: calc(100% - 4px);
   z-index: 30;
   width: 240px;
   padding: 10px;

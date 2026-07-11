@@ -607,7 +607,12 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           ref={panelRef}
           style={{
             width: panelSize.width,
-            height: panelSize.height,
+            // Pas de hauteur imposée quand replié : le panneau doit pouvoir
+            // reprendre sa taille naturelle (juste la barre de titre) au
+            // lieu de garder la hauteur dépliée avec un grand vide en
+            // dessous (panel-body passe en display:none, mais une hauteur
+            // fixée en inline style ne s'ajuste pas toute seule au contenu).
+            ...(isPanelFolded ? {} : { height: panelSize.height }),
             ...(panelPosition ? { left: panelPosition.left, top: panelPosition.top } : {})
           }}
         >
