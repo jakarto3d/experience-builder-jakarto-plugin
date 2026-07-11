@@ -228,11 +228,13 @@ export interface InitializeViewerOptions {
   /** Appelé à chaque changement de position/image (événement `position`). */
   onViewChange?: (state: JakartoViewState) => void
   /**
-   * Appelé à chaque rotation (peut être fréquent pendant un glisser dans le
-   * panorama) — séparé de `onViewChange` pour permettre de mettre à jour un
-   * indicateur d'orientation sans déclencher de re-render React à chaque tick.
+   * Appelé à chaque rotation ou changement de champ de vision (peut être
+   * fréquent pendant un glisser/zoom dans le panorama) — séparé de
+   * `onViewChange` pour permettre de mettre à jour un indicateur
+   * d'orientation sans déclencher de re-render React à chaque tick. `pan`
+   * peut être `null` si aucun événement `rotation` n'est encore arrivé.
    */
-  onOrientationChange?: (pan: number) => void
+  onOrientationChange?: (pan: number | null, fov: number | null) => void
 }
 
 export interface JakartoViewerHandle {
@@ -318,7 +320,7 @@ export async function initializeViewer(
           if (destroyed) return
           const pan = (event as CustomEvent<number>).detail
           state.pan = pan
-          options.onOrientationChange?.(pan)
+          options.onOrientationChange?.(pan, state.fov)
         }
         window.addEventListener('rotation', onRotationEvent)
 
@@ -330,7 +332,9 @@ export async function initializeViewer(
 
         const onFovEvent = (event: Event) => {
           if (destroyed) return
-          state.fov = (event as CustomEvent<number>).detail
+          const fov = (event as CustomEvent<number>).detail
+          state.fov = fov
+          options.onOrientationChange?.(state.pan, fov)
         }
         window.addEventListener('fov', onFovEvent)
 

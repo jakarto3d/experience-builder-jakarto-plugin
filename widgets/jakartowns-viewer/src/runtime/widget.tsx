@@ -14,6 +14,7 @@ import {
   type JakartoMultipassImage,
   type JakartoWidgetSettings
 } from './services/jakarto'
+import { buildObserverIconDataUrl, OBSERVER_ICON_SIZE, DEFAULT_OBSERVER_FOV } from './lib/observerIcon'
 import defaultMessages from './translations/default'
 import './widget.css'
 
@@ -29,16 +30,18 @@ const MIN_PANEL_WIDTH = 260
 const MIN_PANEL_HEIGHT = 220
 const TIMELINE_SCROLL_STEP = 160
 const PANEL_MARGIN = 12
-// Bleu Jakarto officiel (--ds-color-primary-500 de @jakarto3d/jakui).
-const OBSERVER_MARKER_COLOR = 'hsl(212, 49%, 38%)'
+// Arrondi du fov avant de régénérer l'icône (évite de reconstruire le SVG à
+// chaque micro-variation de zoom dans le panorama) — même principe que
+// JKTOWNS_FOV_PRECISION dans l'implémentation de référence.
+const OBSERVER_FOV_PRECISION = 2
 
 /**
  * Convertit le pan Jakartowns (0 = Nord, sens antihoraire — voir
  * buildJakartownsUrl) en un angle de rotation pour un symbole ArcGIS
- * (`SimpleMarkerSymbol.angle`), supposé exprimé en degrés sens horaire
- * depuis le Nord — convention standard pour les flèches de cap. Non
- * vérifié visuellement : si la flèche pointe à l'envers une fois testée,
- * inverser le signe ici.
+ * (`PictureMarkerSymbol.angle`), exprimé en degrés sens horaire depuis le
+ * Nord — même convention que `heading` sur l'ObserverIcon de jakui (voir
+ * lib/observerIcon.ts), confirmée par sa documentation de props ("0 points
+ * up, positive values rotate clockwise").
  */
 function jakartownsPanToMarkerAngle(panRadians: number): number {
   const degrees = 360 - (panRadians * 180) / Math.PI
@@ -221,11 +224,15 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   // Indicateur de position/orientation sur la carte liée (voir l'effet plus
   // bas). arcgisModulesRef garde Graphic pour ne le charger qu'une fois ;
   // positionGraphicRef est le graphic unique qu'on repositionne/réoriente au
-  // lieu d'en recréer un à chaque mise à jour.
+  // lieu d'en recréer un à chaque mise à jour. L'icône (SVG en data-URL)
+  // n'est régénérée que si le fov (arrondi) a changé — le cap se règle
+  // séparément via l'angle du symbole, sans toucher à l'image.
   const arcgisModulesRef = React.useRef<{ Graphic: any } | null>(null)
   const positionGraphicsLayerRef = React.useRef<any>(null)
   const positionGraphicRef = React.useRef<any>(null)
   const lastKnownPositionRef = React.useRef<JakartoPosition | null>(null)
+  const observerIconUrlRef = React.useRef<string | null>(null)
+  const observerIconFovRef = React.useRef<number | null>(null)
 
   const onActiveViewChange = React.useCallback((view: JimuMapView) => {
     setJimuMapView(view)
@@ -339,18 +346,30 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   // Déplace/réoriente le graphic existant plutôt que d'en recréer un à
   // chaque appel (moins coûteux, utile vu la fréquence des événements
-  // `rotation`).
-  const updatePositionMarker = React.useCallback((position: JakartoPosition, panRadians: number | null) => {
+  // `rotation`/`fov`). L'icône (image SVG) n'est régénérée que si le fov
+  // arrondi a changé ; le cap se règle via `symbol.angle` uniquement.
+  const updatePositionMarker = React.useCallback((
+    position: JakartoPosition,
+    panRadians: number | null,
+    fovDegrees: number | null
+  ) => {
     const modules = arcgisModulesRef.current
     const layer = positionGraphicsLayerRef.current
     if (!modules || !layer) return
 
+    const roundedFov = fovDegrees != null
+      ? Math.round(fovDegrees * OBSERVER_FOV_PRECISION) / OBSERVER_FOV_PRECISION
+      : DEFAULT_OBSERVER_FOV
+    if (observerIconUrlRef.current == null || observerIconFovRef.current !== roundedFov) {
+      observerIconUrlRef.current = buildObserverIconDataUrl(roundedFov)
+      observerIconFovRef.current = roundedFov
+    }
+
     const symbol = {
-      type: 'simple-marker',
-      style: 'triangle',
-      size: 14,
-      color: OBSERVER_MARKER_COLOR,
-      outline: { color: '#ffffff', width: 1.5 },
+      type: 'picture-marker',
+      url: observerIconUrlRef.current,
+      width: `${OBSERVER_ICON_SIZE}px`,
+      height: `${OBSERVER_ICON_SIZE}px`,
       angle: panRadians != null ? jakartownsPanToMarkerAngle(panRadians) : 0
     }
     const geometry = { type: 'point', latitude: position.latitude, longitude: position.longitude }
@@ -385,15 +404,15 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           const position = { latitude: state.latitude, longitude: state.longitude }
           setCurrentPosition(position)
           lastKnownPositionRef.current = position
-          updatePositionMarker(position, state.pan)
+          updatePositionMarker(position, state.pan, state.fov)
         }
         setCurrentDate(state.date)
         setCurrentImageId(state.imageId)
         setAvailableImages(state.availableImages)
       },
-      onOrientationChange: (pan) => {
+      onOrientationChange: (pan, fov) => {
         if (lastKnownPositionRef.current) {
-          updatePositionMarker(lastKnownPositionRef.current, pan)
+          updatePositionMarker(lastKnownPositionRef.current, pan, fov)
         }
       }
     }).then((handle) => {

@@ -2,6 +2,38 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Réplique fidèle de l'ObserverIcon de jakui (point + arc de fov)
+
+Demande utilisateur : remplacer le triangle bleu improvisé par une réplique
+de l'"Observer Icon" de `@jakarto3d/jakui`, piloté par le fov et le cap,
+tel qu'utilisé dans `jakassets-viewer`.
+
+Trouvé le composable exact (`src/composables/useJakartownsObserver.js`) :
+il rend le composant Vue `v2.ObserverIcon` hors-écran en SVG, le
+sérialise, le convertit en image raster, et l'affiche via une couche
+MapLibre (`icon-rotate` lié à un champ `bearing`). Spécifique à MapLibre,
+donc pas réutilisable tel quel — mais le composant compilé lui-même
+(`node_modules/@jakarto3d/jakui/dist/jakui.es.js`, fonction
+`V2ObserverIcon`) contient toute la géométrie exacte, extraite et portée
+dans `src/runtime/lib/observerIcon.ts` :
+- Un point central en dégradé linéaire (`--ds-color-observer-dot-start/end`).
+- Un arc de fov dessiné via la technique `stroke-dasharray`/`stroke-dashoffset`
+  sur un cercle plein (un tracé standard pour un arc partiel en SVG), avec
+  un arc "ombre" à 90% de la longueur de l'arc principal (léger effet de
+  profondeur) et un dégradé radial (`--ds-color-observer-arc-inner/outer`).
+- Confirmé dans les types du composant (`heading: "0 points up, positive
+  values rotate clockwise"`) : la même convention que celle déjà supposée
+  pour `jakartownsPanToMarkerAngle` — cohérence bienvenue.
+
+Différence volontaire par rapport à leur implémentation : le SVG généré ne
+contient PAS la rotation par cap (contrairement à leur image rastérisée
+pré-tournée) — le cap est appliqué séparément via
+`PictureMarkerSymbol.angle` côté ArcGIS, qui supporte nativement la
+rotation d'image. Ça évite de régénérer l'image à chaque micro-rotation ;
+seul un changement de fov (arrondi, comme leur `JKTOWNS_FOV_PRECISION`)
+déclenche une régénération. Remplace le `SimpleMarkerSymbol` triangle par
+un `PictureMarkerSymbol` référençant ce SVG en data-URL.
+
 ## 2026-07-10 — Toggle réglages qui ne se refermait pas, fil des dates absent au tout premier chargement
 
 - **Le bouton réglages ne se refermait jamais en cliquant dessus** : le
