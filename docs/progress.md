@@ -2,6 +2,28 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Consolidation du layout : la barre de titre et le fil des dates ne peuvent plus disparaître
+
+Retour utilisateur : après un redimensionnement, la barre de titre et le
+fil des dates avaient complètement disparu (seul le panorama brut restait
+visible). Cause racine : `panelSize.height` ne représentait que la hauteur
+du panorama, calculée en SOUSTRAYANT manuellement une constante
+`TITLEBAR_HEIGHT` figée de la hauteur totale disponible — un calcul
+arithmétique fragile, sans aucune garantie structurelle que la barre de
+titre garde sa place.
+
+**Fix** : `panelSize.height` représente désormais la hauteur TOTALE du
+panneau (posée directement sur `.jakartowns-viewer-panel` par `style=`),
+et c'est le CSS flexbox qui distribue l'espace en interne :
+`.jakartowns-viewer-panel-titlebar` garde `flex-shrink: 0` (toujours sa
+taille naturelle, ne peut pas être écrasée), `.jakartowns-viewer-panel-body`
+et `.jakartowns-viewer-panorama-area` (ou `.jakartowns-viewer-login`)
+prennent `flex: 1; min-height: 0;` pour se partager tout le reste. Plus
+aucun calcul manuel de soustraction (la constante `TITLEBAR_HEIGHT` et son
+risque d'imprécision disparaissent complètement) — la barre de titre et le
+fil des dates ne peuvent structurellement plus être poussés hors de la
+zone visible, quelle que soit la taille du panneau.
+
 ## 2026-07-10 — Palette Jakarto, indicateur de position/orientation, arrêt du recentrage automatique
 
 - **Palette de couleurs Jakarto** : les tokens du design system

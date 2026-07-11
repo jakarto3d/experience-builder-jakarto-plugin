@@ -241,6 +241,14 @@
 }
 
 .jakartowns-viewer-panel-body {
+  /*
+   * flex:1 — occupe tout l'espace restant sous la barre de titre (qui garde
+   * flex-shrink:0, donc toujours sa taille naturelle). panelSize.height
+   * s'applique au panneau entier (voir widget.tsx), plus à une zone
+   * spécifique : plus de calcul manuel de soustraction, donc plus de risque
+   * de faire déborder/disparaître la barre de titre ou le fil des dates.
+   */
+  flex: 1;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -254,11 +262,14 @@
 /* ─── Connexion ─────────────────────────────────────────────────────── */
 
 .jakartowns-viewer-login {
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 1.5rem 1rem;
+  overflow: auto;
 }
 
 .jakartowns-viewer-login-title {
@@ -323,6 +334,8 @@
 /* ─── Panorama ──────────────────────────────────────────────────────── */
 
 .jakartowns-viewer-panorama-area {
+  flex: 1;
+  min-height: 0;
   position: relative;
   width: 100%;
 }

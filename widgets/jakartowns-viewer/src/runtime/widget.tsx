@@ -17,17 +17,18 @@ import {
 import defaultMessages from './translations/default'
 import './widget.css'
 
+// panelSize.height est la hauteur TOTALE du panneau (barre de titre incluse),
+// pas seulement celle du panorama : la barre de titre garde toujours sa
+// taille naturelle (flex-shrink: 0 en CSS) et le panorama se partage le
+// reste via flex:1, donc aucun calcul manuel de soustraction n'est
+// nécessaire ici — la barre de titre et le fil des dates ne peuvent plus
+// disparaître à cause d'une erreur d'arithmétique sur la hauteur.
 const DEFAULT_PANEL_WIDTH = 380
-const DEFAULT_PANORAMA_HEIGHT = 320
+const DEFAULT_PANEL_HEIGHT = 360
 const MIN_PANEL_WIDTH = 260
-const MIN_PANORAMA_HEIGHT = 180
+const MIN_PANEL_HEIGHT = 220
 const TIMELINE_SCROLL_STEP = 160
 const PANEL_MARGIN = 12
-// Hauteur réelle de .jakartowns-viewer-panel-titlebar (icônes 26px + padding
-// vertical 8+8) : figée ici plutôt que mesurée via getBoundingClientRect,
-// qui peut renvoyer 0 si l'effet se déclenche avant que le layout ne se
-// stabilise — ça avait fait déborder le panneau et masqué le fil des dates.
-const TITLEBAR_HEIGHT = 42
 // Bleu Jakarto officiel (--ds-color-primary-500 de @jakarto3d/jakui).
 const OBSERVER_MARKER_COLOR = 'hsl(212, 49%, 38%)'
 
@@ -154,7 +155,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   // panneau, celui-ci occupe tout l'espace disponible du widget par défaut.
   const hasCustomSizeRef = React.useRef(false)
   const [panelPosition, setPanelPosition] = React.useState<PanelPosition | null>(null)
-  const [panelSize, setPanelSize] = React.useState<PanelSize>({ width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANORAMA_HEIGHT })
+  const [panelSize, setPanelSize] = React.useState<PanelSize>({ width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANEL_HEIGHT })
   const [isPanelFolded, setIsPanelFolded] = React.useState(false)
 
   const [jimuMapView, setJimuMapView] = React.useState<JimuMapView>(null)
@@ -178,7 +179,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       setPanelPosition({ left: PANEL_MARGIN, top: PANEL_MARGIN })
       setPanelSize({
         width: Math.max(MIN_PANEL_WIDTH, rootRect.width - PANEL_MARGIN * 2),
-        height: Math.max(MIN_PANORAMA_HEIGHT, rootRect.height - PANEL_MARGIN * 2 - TITLEBAR_HEIGHT)
+        height: Math.max(MIN_PANEL_HEIGHT, rootRect.height - PANEL_MARGIN * 2)
       })
     }
 
@@ -527,9 +528,9 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     let height = resize.startHeight
     let top = resize.startTop
     if (resize.directionY === 1) {
-      height = Math.min(Math.max(MIN_PANORAMA_HEIGHT, resize.startHeight + dy), resize.rootHeight - resize.startTop)
+      height = Math.min(Math.max(MIN_PANEL_HEIGHT, resize.startHeight + dy), resize.rootHeight - resize.startTop)
     } else if (resize.directionY === -1) {
-      height = Math.min(Math.max(MIN_PANORAMA_HEIGHT, resize.startHeight - dy), resize.startTop + resize.startHeight)
+      height = Math.min(Math.max(MIN_PANEL_HEIGHT, resize.startHeight - dy), resize.startTop + resize.startHeight)
       top = Math.max(0, resize.startTop + (resize.startHeight - height))
     }
 
@@ -606,6 +607,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           ref={panelRef}
           style={{
             width: panelSize.width,
+            height: panelSize.height,
             ...(panelPosition ? { left: panelPosition.left, top: panelPosition.top } : {})
           }}
         >
@@ -727,7 +729,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             )}
 
             {isAuthenticated && (
-              <div className="jakartowns-viewer-panorama-area" style={{ height: panelSize.height }}>
+              <div className="jakartowns-viewer-panorama-area">
                 <div ref={viewerContainerRef} className="jakartowns-viewer-panorama" />
 
                 {timelineEntries.length > 0 && (
