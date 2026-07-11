@@ -432,6 +432,7 @@
   align-items: center;
   gap: 4px;
   overflow-x: auto;
+  overflow-y: visible; /* laisse les chips grossir vers le haut au survol sans être rognés */
   scroll-behavior: smooth;
   scrollbar-width: none;
 }
@@ -442,6 +443,7 @@
 
 .jakartowns-viewer-multipass-chip {
   flex-shrink: 0;
+  position: relative; /* nécessaire pour que z-index élève le chip survolé au-dessus de ses voisins */
   padding: 3px 8px;
   border: 1px solid rgba(255, 255, 255, 0.5);
   border-radius: 999px;
@@ -451,16 +453,22 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
+  transform: scale(1);
+  transform-origin: bottom center;
+  transition: transform 160ms ease, background-color 160ms ease;
 }
 
-@keyframes jakartowns-viewer-chip-wave {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-
+/* Effet façon dock macOS : le chip survolé grossit (pas de rebond), et ses
+   voisins immédiats grossissent un peu aussi, en dégradé. */
 .jakartowns-viewer-multipass-chip:hover {
-  background: rgba(15, 23, 42, 0.75);
-  animation: jakartowns-viewer-chip-wave 0.6s ease-in-out infinite;
+  background: rgba(15, 23, 42, 0.85);
+  transform: scale(1.22);
+  z-index: 1;
+}
+
+.jakartowns-viewer-multipass-chip:has(+ .jakartowns-viewer-multipass-chip:hover),
+.jakartowns-viewer-multipass-chip:hover + .jakartowns-viewer-multipass-chip {
+  transform: scale(1.1);
 }
 
 .jakartowns-viewer-multipass-chip.is-selected {
