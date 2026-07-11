@@ -23,10 +23,10 @@ import './widget.css'
 // (flex-shrink: 0 in CSS) and the panorama shares the rest via flex:1, so no
 // manual subtraction is needed here — the title bar and the date timeline
 // can no longer disappear because of a height arithmetic mistake.
-const DEFAULT_PANEL_WIDTH = 380
-const DEFAULT_PANEL_HEIGHT = 360
-const MIN_PANEL_WIDTH = 260
-const MIN_PANEL_HEIGHT = 220
+const DEFAULT_PANEL_WIDTH = 400
+const DEFAULT_PANEL_HEIGHT = 390
+const MIN_PANEL_WIDTH = 400
+const MIN_PANEL_HEIGHT = 390
 const TIMELINE_SCROLL_STEP = 160
 const PANEL_MARGIN = 12
 // Rounds the fov before regenerating the icon (avoids rebuilding the SVG on
