@@ -200,7 +200,12 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const [settings, setSettings] = React.useState<JakartoWidgetSettings>(() => getStoredSettings())
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
-  const settingsPopoverRef = React.useRef<HTMLDivElement>(null)
+  // Couvre le bouton engrenage ET le popover (pas juste le popover) : sinon
+  // cliquer sur le bouton lui-même pendant que le popover est ouvert compte
+  // comme un "clic en dehors" au pointerdown (le fermant), puis le click qui
+  // suit sur le bouton le rouvre aussitôt via le toggle — au final il ne se
+  // fermait jamais vraiment en cliquant dessus.
+  const settingsAnchorRef = React.useRef<HTMLDivElement>(null)
 
   // Dernière position connue (clic carte ou navigation Jakartowns), utilisée
   // en repli pour le bouton "Ouvrir dans Jakartowns" tant qu'aucune image
@@ -238,7 +243,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   React.useEffect(() => {
     if (!isSettingsOpen) return
     const onPointerDownOutside = (event: PointerEvent) => {
-      if (!settingsPopoverRef.current?.contains(event.target as Node)) {
+      if (!settingsAnchorRef.current?.contains(event.target as Node)) {
         setIsSettingsOpen(false)
       }
     }
@@ -649,7 +654,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             </div>
 
             <div className="jakartowns-viewer-panel-titlebar-end">
-              <div className="jakartowns-viewer-settings-anchor">
+              <div className="jakartowns-viewer-settings-anchor" ref={settingsAnchorRef}>
                 <button
                   type="button"
                   className="jakartowns-viewer-icon-btn"
@@ -660,7 +665,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                   <IconGear />
                 </button>
                 {isSettingsOpen && (
-                  <div className="jakartowns-viewer-settings-popover" ref={settingsPopoverRef}>
+                  <div className="jakartowns-viewer-settings-popover">
                     <label className="jakartowns-viewer-settings-row">
                       <input
                         type="checkbox"

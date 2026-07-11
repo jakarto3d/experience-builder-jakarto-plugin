@@ -2,6 +2,29 @@
 
 Format : le plus récent en haut. Chaque entrée correspond à un commit.
 
+## 2026-07-10 — Toggle réglages qui ne se refermait pas, fil des dates absent au tout premier chargement
+
+- **Le bouton réglages ne se refermait jamais en cliquant dessus** : le
+  gestionnaire "clic en dehors" (`pointerdown` global) ne considérait que
+  le popover comme "dedans" — cliquer sur le BOUTON engrenage lui-même
+  pendant que le popover était ouvert comptait comme un clic "en dehors" à
+  la phase `pointerdown` (le fermant), puis le `click` qui suit sur ce même
+  bouton le rouvrait aussitôt via le toggle (`!open` sur un état déjà
+  remis à `false`) — au final il ne se fermait jamais en cliquant dessus,
+  seulement en cliquant ailleurs. Fix : le ref couvre maintenant tout
+  l'ancrage (bouton + popover), pas juste le popover.
+- **Fil des dates absent au tout premier chargement** (avant toute
+  interaction) : hypothèse retenue, le tout premier `setPosition()`
+  (appelé automatiquement à la création du viewer, en synchrone) semble
+  parfois s'exécuter avant que Jakartowns ait fini son initialisation
+  interne, et l'événement `position` qui suit arriverait alors sans
+  `currentSphereInfo` — laissant `currentImageId`/`currentDate` vides.
+  Repoussé dans un `requestAnimationFrame`, comme le fix déjà validé pour
+  le canvas 0x0 (même classe de problème : Jakartowns pas encore prêt au
+  moment de l'appel synchrone). **Non confirmé à 100 %** — à vérifier au
+  prochain test si le fil des dates apparaît bien dès le premier
+  chargement.
+
 ## 2026-07-10 — Deux régressions du commit précédent : popover réglages écrasé, repli laissant un vide
 
 Deux bugs, tous deux introduits par mes propres fixes précédents :

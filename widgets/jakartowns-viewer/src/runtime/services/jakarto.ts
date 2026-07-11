@@ -335,7 +335,20 @@ export async function initializeViewer(
         window.addEventListener('fov', onFovEvent)
 
         if (options.latitude != null && options.longitude != null) {
-          viewer.setPosition({ latitude: options.latitude, longitude: options.longitude })
+          // Appelé depuis une frame différée (comme le dispatch de resize
+          // plus bas) : appelé de façon strictement synchrone ici, ce
+          // premier setPosition semble parfois s'exécuter avant que
+          // Jakartowns ait fini son initialisation interne, et l'événement
+          // `position` qui suit arrive alors sans `currentSphereInfo` — la
+          // date et le fil des images restent vides au tout premier
+          // chargement (observé par l'utilisateur). Non confirmé à 100%,
+          // mais peu coûteux à tenter vu le fix similaire déjà validé pour
+          // le canvas.
+          const { latitude, longitude } = options
+          requestAnimationFrame(() => {
+            if (destroyed) return
+            viewer.setPosition({ latitude, longitude })
+          })
         }
 
         // Jakartowns ne redimensionne son canvas qu'en réaction à l'événement
