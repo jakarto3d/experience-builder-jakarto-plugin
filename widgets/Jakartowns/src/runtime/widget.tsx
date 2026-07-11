@@ -345,9 +345,8 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   }
 
   // Creates the layer hosting the position/orientation indicator, once per
-  // map view. Doesn't depend on any Jakarto data (just ArcGIS's
-  // GraphicsLayer/Graphic): no cross-origin auth concern here, unlike the
-  // (removed) jakman layer.
+  // map view. Depends only on ArcGIS's GraphicsLayer/Graphic, not on any
+  // Jakarto-authenticated data, so there's no cross-origin auth concern here.
   React.useEffect(() => {
     const view = jimuMapView?.view
     if (!view) return

@@ -1,22 +1,13 @@
 /**
- * lib/observerIcon.ts
- *
  * Reproduces the "Observer Icon" from @jakarto3d/jakui (Vue component
- * `V2ObserverIcon`, used by jakassets-viewer to indicate the panorama's
- * position and orientation on the map): a gradient dot (position) + a
- * gradient arc representing the field of view (fov).
+ * `V2ObserverIcon`, dist/jakui.es.js): a gradient dot (position) + a
+ * gradient arc (field of view), ported as-is including its dasharray/
+ * dashoffset arc geometry and "shadow" arc depth effect.
  *
- * Geometry and math (dasharray/dashoffset to draw a partial arc from a
- * full circle — a standard SVG technique, with a "shadow" arc at 90% of
- * the main arc's length for a depth effect) ported as-is from
- * @jakarto3d/jakui's compiled component (dist/jakui.es.js, function
- * `V2ObserverIcon`).
- *
- * The SVG generated here "points up" (North) by default; heading rotation
- * is NOT included in it — it's applied separately via ArcGIS's
- * `PictureMarkerSymbol.angle` (see widget.tsx), so the image never needs
- * to be regenerated on every micro-rotation. Only a fov change requires
- * regeneration.
+ * The generated SVG points up (North); heading rotation is applied
+ * separately via ArcGIS's `PictureMarkerSymbol.angle` (see widget.tsx) so
+ * the image only needs regenerating when the fov changes, not on every
+ * heading micro-rotation.
  */
 
 // --ds-color-observer-* tokens from @jakarto3d/jakui (light theme, values
