@@ -2,7 +2,7 @@
 
 Custom widget for **ArcGIS Experience Builder** that displays the
 **Jakartowns** panorama in sync with an ArcGIS map, directly from an ArcGIS
-experience (e.g. `sig.mascouche.ca`).
+experience.
 
 ## Quick started - Installation
 https://github.com/user-attachments/assets/e7454dcd-1b93-427d-a3e5-7b9b7492a65e

@@ -7,8 +7,8 @@ into an ADR if it changes a decision.
 
 - **Auth on the real portal domain**: authentication has only been verified
   from `localhost`. CORS behavior on `account.jakarto.com` might differ once
-  the widget is hosted under the real portal domain (`sig.mascouche.ca`) —
-  see [ADR-0004](adr/0004-cache-api-key-in-localstorage.md).
+  the widget is hosted under the real portal domain — see
+  [ADR-0004](adr/0004-cache-api-key-in-localstorage.md).
 - **Right-click conflicts**: right-click-to-locate (opt-in, see
   [`specs/interaction-behavior.md`](specs/interaction-behavior.md)) hasn't
   been tested alongside other widgets that might already use a right-click
