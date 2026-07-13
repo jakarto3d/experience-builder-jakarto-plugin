@@ -238,6 +238,8 @@ function loadJakartownsScript(): Promise<void> {
 export interface InitializeViewerOptions {
   latitude?: number
   longitude?: number
+  /** Whether Jakartowns shows its own compass for orienting inside the panorama. Defaults to `true`. */
+  compassEnabled?: boolean
   /** Called on every position/image change (`position` event). */
   onViewChange?: (state: JakartoViewState) => void
   /**
@@ -297,10 +299,11 @@ export async function initializeViewer(
         // Hides Jakartowns' native header (logo/search/help) — the widget
         // shows its own "Jakartowns" title bar and its ArcGIS map already
         // acts as a minimap. The compass stays useful for orienting inside
-        // the panorama.
+        // the panorama, so it defaults to on but can be turned off in the
+        // widget's settings panel.
         headerEnabled: false,
         minimapEnabled: false,
-        compassEnabled: true
+        compassEnabled: options.compassEnabled ?? true
       },
       (viewer) => {
         let destroyed = false

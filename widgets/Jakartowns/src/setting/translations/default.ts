@@ -1,3 +1,5 @@
 export default {
-  linkedMapSectionTitle: 'Carte liée'
+  linkedMapSectionTitle: 'Carte liée',
+  panoramaSectionTitle: 'Panorama',
+  compassEnabledLabel: 'Afficher la boussole'
 }

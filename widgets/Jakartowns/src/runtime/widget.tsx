@@ -378,6 +378,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     // or right click).
     initializeViewer(viewerContainerRef.current, {
       ...(currentPosition ? { latitude: currentPosition.latitude, longitude: currentPosition.longitude } : {}),
+      compassEnabled: config.compassEnabled,
       // No longer recenters the map when the image/position changes inside
       // the panorama (deemed too intrusive): only the indicator on the map
       // updates, the user's view stays under their control.

@@ -208,6 +208,18 @@ describe('initializeViewer — viewer wiring', () => {
     expect(createJakartowns.mock.calls[0][0]).toBe(`#${container.id}`)
   })
 
+  it('enables the compass by default', async () => {
+    const { createJakartowns, handlePromise } = setUp()
+    await handlePromise
+    expect(createJakartowns.mock.calls[0][1]).toEqual(expect.objectContaining({ compassEnabled: true }))
+  })
+
+  it('disables the compass when compassEnabled is false', async () => {
+    const { createJakartowns, handlePromise } = setUp({ compassEnabled: false })
+    await handlePromise
+    expect(createJakartowns.mock.calls[0][1]).toEqual(expect.objectContaining({ compassEnabled: false }))
+  })
+
   it('parses a position event into onViewChange, including multipass images', async () => {
     const onViewChange = jest.fn()
     const { handlePromise } = setUp({ onViewChange })

@@ -13,6 +13,8 @@ export interface Config {
   /** Fallback position as long as no click/extent has been received from the linked map. */
   fallbackLatitude: number
   fallbackLongitude: number
+  /** Whether Jakartowns shows its own compass for orienting inside the panorama. */
+  compassEnabled: boolean
 }
 
 export type IMConfig = ImmutableObject<Config>
