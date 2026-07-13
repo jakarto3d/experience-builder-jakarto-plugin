@@ -1,5 +1,8 @@
 # Jakarto × ArcGIS Experience Builder
 
+[![Release](https://github.com/jakarto3d/experience-builder-jakarto-plugin/actions/workflows/release.yml/badge.svg)](https://github.com/jakarto3d/experience-builder-jakarto-plugin/actions/workflows/release.yml)
+[![Latest release](https://img.shields.io/github/v/release/jakarto3d/experience-builder-jakarto-plugin)](https://github.com/jakarto3d/experience-builder-jakarto-plugin/releases/latest)
+
 Custom widget for **ArcGIS Experience Builder** that displays the
 **Jakartowns** panorama in sync with an ArcGIS map, directly from an ArcGIS
 experience.

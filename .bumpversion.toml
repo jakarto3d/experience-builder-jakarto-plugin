@@ -1,0 +1,15 @@
+[tool.bumpversion]
+current_version = "1.0.0"
+parse = "(?P<major>\\d+)\\.(?P<minor>\\d+)\\.(?P<patch>\\d+)"
+serialize = ["{major}.{minor}.{patch}"]
+search = "{current_version}"
+replace = "{new_version}"
+tag = true
+tag_name = "v{new_version}"
+tag_message = "Release {new_version}"
+commit = true
+message = "chore: bump version {current_version} -> {new_version}"
+allow_dirty = false
+
+[[tool.bumpversion.files]]
+filename = "widgets/Jakartowns/manifest.json"
