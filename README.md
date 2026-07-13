@@ -4,10 +4,16 @@ Custom widget for **ArcGIS Experience Builder** that displays the
 **Jakartowns** panorama in sync with an ArcGIS map, directly from an ArcGIS
 experience.
 
+## Quick Start - Plugin View
+
+<img width="1920" height="942" alt="image" src="https://github.com/user-attachments/assets/820f0c4e-a227-47f9-a3fd-2c894e478d85" />
+
 ## Quick Start - Installation
+
 https://github.com/user-attachments/assets/e7454dcd-1b93-427d-a3e5-7b9b7492a65e
 
 ## Quick Start - Plugin Usage
+
 https://github.com/user-attachments/assets/70f4d0de-6908-4cd3-8feb-fb53c5a7090c
 
 
