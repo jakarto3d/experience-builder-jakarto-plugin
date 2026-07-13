@@ -4,10 +4,10 @@ Custom widget for **ArcGIS Experience Builder** that displays the
 **Jakartowns** panorama in sync with an ArcGIS map, directly from an ArcGIS
 experience.
 
-## Quick started - Installation
+## Quick Start - Installation
 https://github.com/user-attachments/assets/e7454dcd-1b93-427d-a3e5-7b9b7492a65e
 
-## Quick started - Plugin Usage
+## Quick Start - Plugin Usage
 https://github.com/user-attachments/assets/70f4d0de-6908-4cd3-8feb-fb53c5a7090c
 
 
@@ -19,7 +19,7 @@ https://github.com/user-attachments/assets/70f4d0de-6908-4cd3-8feb-fb53c5a7090c
 | [`widgets/Jakartowns/`](widgets/Jakartowns/) | The Experience Builder widget under development (main deliverable). |
 | [`docs/`](docs/) | Architecture decisions (ADR) and widget specifications. |
 
-## Progress
+## Status
 
 See [`widgets/Jakartowns/README.md`](widgets/Jakartowns/README.md) for the
 widget's status and install/test instructions in an ArcGIS Experience
@@ -54,3 +54,7 @@ Useful external resource: [Getting started with widget development](https://deve
 
 This widget exists thanks to the **Ville de Mascouche**, who commissioned its
 development. Thank you for making it possible.
+
+Thanks also to **Esri**: Jakarto is an Esri partner, which gave us access to
+ArcGIS Experience Builder to build and test this plugin throughout its
+development.
