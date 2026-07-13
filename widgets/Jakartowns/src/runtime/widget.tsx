@@ -220,7 +220,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const pendingHeadingRef = React.useRef<PendingHeading | null>(null)
   const pendingHeadingDeadlineRef = React.useRef<number>(0)
   // Long enough to outlast the internal transition (a fast/short one, per
-  // the jakartowns-viewer source), short enough to minimize the window
+  // Jakartowns' own client-side source), short enough to minimize the window
   // where a genuine user drag right after a switch could get overridden —
   // reasserting stops the instant the reported pan matches ours anyway.
   const PENDING_HEADING_TIMEOUT_MS = 800

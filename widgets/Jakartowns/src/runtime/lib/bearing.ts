@@ -6,8 +6,8 @@
  * `autoRotation: false`, unlike the app's own internal navigation) leaves
  * `state.observer.autoRotation` at its default `true`, so the panorama then
  * auto-rotates to the sphere's own default heading and re-commits that over
- * ours — confirmed by reading `Viewer.vue`'s `uid()` watcher in the
- * jakartowns-viewer source. This computes the pan needed, from the actual
+ * ours — confirmed by reading the relevant watcher in Jakartowns' own
+ * client-side source. This computes the pan needed, from the actual
  * (relocated) position, to look towards the point the user actually
  * clicked — applied by the widget *after* that internal clobber has
  * already happened (see widget.tsx).

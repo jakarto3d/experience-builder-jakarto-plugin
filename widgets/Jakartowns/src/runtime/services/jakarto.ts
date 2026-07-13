@@ -378,9 +378,9 @@ export async function initializeViewer(
 
         // Jakartowns only resizes its canvas in reaction to `window`'s
         // `resize` event (no ResizeObserver on its own container) —
-        // confirmed by observing that the jakassets-viewer app forces a
-        // `window.dispatchEvent(new Event('resize'))` on every size change
-        // of its panel containing the viewer. A container mounted by React
+        // confirmed by observing that another internal Jakarto viewer app
+        // forces a `window.dispatchEvent(new Event('resize'))` on every size
+        // change of its panel containing the viewer. A container mounted by React
         // never triggers a real window resize: without this nudge, the
         // canvas stays stuck at its creation size (often 0x0).
         const dispatchResize = () => window.dispatchEvent(new Event('resize'))

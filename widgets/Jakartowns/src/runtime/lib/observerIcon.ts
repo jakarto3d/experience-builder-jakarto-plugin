@@ -1,8 +1,8 @@
 /**
- * Reproduces the "Observer Icon" from @jakarto3d/jakui (Vue component
- * `V2ObserverIcon`, dist/jakui.es.js): a gradient dot (position) + a
- * gradient arc (field of view), ported as-is including its dasharray/
- * dashoffset arc geometry and "shadow" arc depth effect.
+ * Reproduces the "Observer Icon" from Jakarto's internal design-system
+ * component library: a gradient dot (position) + a gradient arc (field of
+ * view), ported as-is including its dasharray/dashoffset arc geometry and
+ * "shadow" arc depth effect.
  *
  * The generated SVG points up (North); heading rotation is applied
  * separately via ArcGIS's `PictureMarkerSymbol.angle` (see widget.tsx) so
@@ -10,16 +10,16 @@
  * heading micro-rotation.
  */
 
-// --ds-color-observer-* tokens from @jakarto3d/jakui (light theme, values
-// copied from node_modules/@jakarto3d/jakui/dist/tokens/semantic.css — the
-// package itself isn't loaded in Experience Builder).
+// Design-system color tokens (light theme) matching Jakarto's Observer Icon
+// component, copied as static values since the design-system package itself
+// isn't loaded in Experience Builder.
 const DOT_START = 'hsl(281, 42%, 37%)' // --ds-color-purple-500
 const DOT_END = 'hsl(212, 49%, 38%)' // --ds-color-primary-500
 const ARC_INNER = 'hsl(212, 49%, 38%)' // --ds-color-primary-500
 const ARC_OUTER = 'hsl(133, 32%, 43%)' // --ds-color-green-500
 const ARC_SHADOW = 'hsl(212, 49%, 38%)' // --ds-color-primary-500
 
-// Same defaults as V2ObserverIcon.
+// Same defaults as Jakarto's own Observer Icon component.
 export const OBSERVER_ICON_SIZE = 48
 const DOT_RADIUS = 5
 const ARC_RADIUS = 14
@@ -76,9 +76,9 @@ export function buildObserverIconDataUrl(fovDegrees: number): string {
  * Converts the Jakartowns pan (0 = North, counter-clockwise — see
  * buildJakartownsUrl in services/jakarto.ts) into a rotation angle for an
  * ArcGIS symbol (`PictureMarkerSymbol.angle`), expressed in degrees
- * clockwise from North — same convention as `heading` on jakui's
- * ObserverIcon, confirmed by its props documentation ("0 points up,
- * positive values rotate clockwise").
+ * clockwise from North — same convention as the `heading` prop on Jakarto's
+ * own Observer Icon component, confirmed by its props documentation ("0
+ * points up, positive values rotate clockwise").
  */
 export function jakartownsPanToMarkerAngle(panRadians: number): number {
   const degrees = 360 - (panRadians * 180) / Math.PI
