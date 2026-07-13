@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"],
+    "noEmit": true
+  },
+  "include": [
+    "widgets/Jakartowns/src/runtime/lib/**/*.ts",
+    "widgets/Jakartowns/src/runtime/services/**/*.ts",
+    "jest.setup.ts"
+  ]
+}

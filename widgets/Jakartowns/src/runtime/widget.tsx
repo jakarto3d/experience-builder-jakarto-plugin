@@ -14,7 +14,24 @@ import {
   type JakartoMultipassImage,
   type JakartoWidgetSettings
 } from './services/jakarto'
-import { buildObserverIconDataUrl, OBSERVER_ICON_SIZE, DEFAULT_OBSERVER_FOV } from './lib/observerIcon'
+import {
+  buildObserverIconDataUrl,
+  OBSERVER_ICON_SIZE,
+  jakartownsPanToMarkerAngle,
+  roundObserverFov
+} from './lib/observerIcon'
+import {
+  computeDefaultFullSize,
+  computeDragPosition,
+  computeResize,
+  RESIZE_HANDLE_DIRECTIONS,
+  type DragState,
+  type ResizeState,
+  type PanelPosition,
+  type PanelSize
+} from './lib/panelGeometry'
+import { buildTimelineEntries } from './lib/timeline'
+import { formatJakartoDate } from './lib/format'
 import defaultMessages from './translations/default'
 import './widget.css'
 
@@ -33,75 +50,6 @@ const PANEL_MARGIN = 12
 // every micro-variation of zoom inside the panorama) — same principle as
 // JKTOWNS_FOV_PRECISION in the reference implementation.
 const OBSERVER_FOV_PRECISION = 2
-
-/**
- * The 8 resize handles (4 edges + 4 corners) only differ by their CSS class
- * suffix and the axis they affect — described here as data instead of
- * duplicated in JSX (see the render below).
- */
-const RESIZE_HANDLE_DIRECTIONS: ReadonlyArray<{
-  cssSuffix: string
-  directionX: -1 | 0 | 1
-  directionY: -1 | 0 | 1
-}> = [
-  { cssSuffix: 'n', directionX: 0, directionY: -1 },
-  { cssSuffix: 's', directionX: 0, directionY: 1 },
-  { cssSuffix: 'e', directionX: 1, directionY: 0 },
-  { cssSuffix: 'w', directionX: -1, directionY: 0 },
-  { cssSuffix: 'ne', directionX: 1, directionY: -1 },
-  { cssSuffix: 'nw', directionX: -1, directionY: -1 },
-  { cssSuffix: 'se', directionX: 1, directionY: 1 },
-  { cssSuffix: 'sw', directionX: -1, directionY: 1 }
-]
-
-/**
- * Converts the Jakartowns pan (0 = North, counter-clockwise — see
- * buildJakartownsUrl) into a rotation angle for an ArcGIS symbol
- * (`PictureMarkerSymbol.angle`), expressed in degrees clockwise from
- * North — same convention as `heading` on jakui's ObserverIcon (see
- * lib/observerIcon.ts), confirmed by its props documentation ("0 points
- * up, positive values rotate clockwise").
- */
-function jakartownsPanToMarkerAngle(panRadians: number): number {
-  const degrees = 360 - (panRadians * 180) / Math.PI
-  return ((degrees % 360) + 360) % 360
-}
-
-interface DragState {
-  pointerId: number
-  startClientX: number
-  startClientY: number
-  startLeft: number
-  startTop: number
-  maxLeft: number
-  maxTop: number
-}
-
-interface ResizeState {
-  pointerId: number
-  startClientX: number
-  startClientY: number
-  startLeft: number
-  startTop: number
-  startWidth: number
-  startHeight: number
-  /** -1 = handle on the left (moves + resizes), 1 = on the right (resizes only), 0 = not involved on this axis. */
-  directionX: -1 | 0 | 1
-  /** Same vertically: -1 = top, 1 = bottom. */
-  directionY: -1 | 0 | 1
-  rootWidth: number
-  rootHeight: number
-}
-
-interface PanelPosition {
-  left: number
-  top: number
-}
-
-interface PanelSize {
-  width: number
-  height: number
-}
 
 // Wrapper shared by all title-bar icons: same viewBox/size/stroke for all of
 // them, only the content (<path>/<circle>) changes from one icon to another.
@@ -154,13 +102,6 @@ const IconGear = () => (
   </IconBase>
 )
 
-function formatJakartoDate(dateString: string | null): string | null {
-  if (!dateString) return null
-  const date = new Date(dateString)
-  if (Number.isNaN(date.getTime())) return null
-  return new Intl.DateTimeFormat('fr-CA', { year: 'numeric', month: 'short', day: 'numeric' }).format(date)
-}
-
 /**
  * "Jakartowns Viewer" widget.
  *
@@ -206,11 +147,13 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     const applyDefaultFullSize = () => {
       if (hasCustomSizeRef.current) return
       const rootRect = root.getBoundingClientRect()
-      setPanelPosition({ left: PANEL_MARGIN, top: PANEL_MARGIN })
-      setPanelSize({
-        width: Math.max(MIN_PANEL_WIDTH, rootRect.width - PANEL_MARGIN * 2),
-        height: Math.max(MIN_PANEL_HEIGHT, rootRect.height - PANEL_MARGIN * 2)
+      const { position, size } = computeDefaultFullSize(rootRect, {
+        margin: PANEL_MARGIN,
+        minWidth: MIN_PANEL_WIDTH,
+        minHeight: MIN_PANEL_HEIGHT
       })
+      setPanelPosition(position)
+      setPanelSize(size)
     }
 
     applyDefaultFullSize()
@@ -225,7 +168,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const [authLoading, setAuthLoading] = React.useState(false)
 
   const viewerContainerRef = React.useRef<HTMLDivElement>(null)
-  const viewerHandleRef = React.useRef<JakartoViewerHandle>(null)
+  const viewerHandleRef = React.useRef<JakartoViewerHandle | null>(null)
   const timelineListRef = React.useRef<HTMLDivElement>(null)
 
   const [settings, setSettings] = React.useState<JakartoWidgetSettings>(() => getStoredSettings())
@@ -383,9 +326,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     const layer = positionGraphicsLayerRef.current
     if (!modules || !layer) return
 
-    const roundedFov = fovDegrees != null
-      ? Math.round(fovDegrees * OBSERVER_FOV_PRECISION) / OBSERVER_FOV_PRECISION
-      : DEFAULT_OBSERVER_FOV
+    const roundedFov = roundObserverFov(fovDegrees, OBSERVER_FOV_PRECISION)
     if (observerIconUrlRef.current == null || observerIconFovRef.current !== roundedFov) {
       observerIconUrlRef.current = buildObserverIconDataUrl(roundedFov)
       observerIconFovRef.current = roundedFov
@@ -478,7 +419,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       viewerHandleRef.current?.setPosition(position)
     }
 
-    const clickHandle = view.on('click', (event) => {
+    const clickHandle = view.on('click', (event: { mapPoint?: { latitude: number, longitude: number } }) => {
       if (!isPickingEnabledRef.current) return
       triggerLocate(event.mapPoint)
       setIsPickingEnabled(false)
@@ -525,12 +466,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const handleTitleBarPointerMove = (event: React.PointerEvent) => {
     const drag = dragStateRef.current
     if (!drag || event.pointerId !== drag.pointerId) return
-    const dx = event.clientX - drag.startClientX
-    const dy = event.clientY - drag.startClientY
-    setPanelPosition({
-      left: Math.min(Math.max(0, drag.startLeft + dx), drag.maxLeft),
-      top: Math.min(Math.max(0, drag.startTop + dy), drag.maxTop)
-    })
+    setPanelPosition(computeDragPosition(drag, event.clientX, event.clientY))
   }
 
   const handleTitleBarPointerUp = (event: React.PointerEvent) => {
@@ -567,30 +503,16 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const handleResizeHandlePointerMove = (event: React.PointerEvent) => {
     const resize = resizeStateRef.current
     if (!resize || event.pointerId !== resize.pointerId) return
-    const dx = event.clientX - resize.startClientX
-    const dy = event.clientY - resize.startClientY
+    const { size, position } = computeResize(resize, event.clientX, event.clientY, {
+      minWidth: MIN_PANEL_WIDTH,
+      minHeight: MIN_PANEL_HEIGHT
+    })
 
-    let width = resize.startWidth
-    let left = resize.startLeft
-    if (resize.directionX === 1) {
-      width = Math.min(Math.max(MIN_PANEL_WIDTH, resize.startWidth + dx), resize.rootWidth - resize.startLeft)
-    } else if (resize.directionX === -1) {
-      width = Math.min(Math.max(MIN_PANEL_WIDTH, resize.startWidth - dx), resize.startLeft + resize.startWidth)
-      left = Math.max(0, resize.startLeft + (resize.startWidth - width))
-    }
-
-    let height = resize.startHeight
-    let top = resize.startTop
-    if (resize.directionY === 1) {
-      height = Math.min(Math.max(MIN_PANEL_HEIGHT, resize.startHeight + dy), resize.rootHeight - resize.startTop)
-    } else if (resize.directionY === -1) {
-      height = Math.min(Math.max(MIN_PANEL_HEIGHT, resize.startHeight - dy), resize.startTop + resize.startHeight)
-      top = Math.max(0, resize.startTop + (resize.startHeight - height))
-    }
-
-    setPanelSize({ width, height })
+    setPanelSize(size)
+    // Only left/top-side handles also move the panel — matches computeResize,
+    // which only changes `left`/`top` away from the start values in that case.
     if (resize.directionX === -1 || resize.directionY === -1) {
-      setPanelPosition({ left, top })
+      setPanelPosition(position)
     }
   }
 
@@ -604,14 +526,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     timelineListRef.current?.scrollBy({ left: direction * TIMELINE_SCROLL_STEP, behavior: 'smooth' })
   }
 
-  // Always at least the current image (even without multipass), so the
-  // date stays visible in every case — not just when several captures
-  // exist at the same spot.
-  const timelineEntries: JakartoMultipassImage[] = availableImages.length > 0
-    ? availableImages
-    : currentImageId != null
-      ? [{ imageId: currentImageId, date: currentDate }]
-      : []
+  const timelineEntries: JakartoMultipassImage[] = buildTimelineEntries(availableImages, currentImageId, currentDate)
 
   const [canScrollTimeline, setCanScrollTimeline] = React.useState(false)
 

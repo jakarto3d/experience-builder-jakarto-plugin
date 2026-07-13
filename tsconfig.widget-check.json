@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": [
+    "widgets/Jakartowns/src/**/*.ts",
+    "widgets/Jakartowns/src/**/*.tsx",
+    "types/jimu-stubs.d.ts"
+  ]
+}

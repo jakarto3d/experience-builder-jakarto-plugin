@@ -1,0 +1,19 @@
+{
+  "name": "jakarto-experience-builder-plugin-tests",
+  "private": true,
+  "description": "Root-level test harness for the parts of widgets/Jakartowns/ that don't depend on jimu-core/jimu-ui/jimu-arcgis. Not copied into an ArcGIS Experience Builder Developer Edition — see docs/adr/0011-extract-pure-logic-for-unit-testing.md.",
+  "scripts": {
+    "test": "TZ=UTC jest",
+    "test:watch": "TZ=UTC jest --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.test.json",
+    "widget-check": "tsc --noEmit -p tsconfig.widget-check.json"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.14",
+    "@types/react": "^18.3.12",
+    "jest": "^29.7.0",
+    "jest-environment-jsdom": "^29.7.0",
+    "ts-jest": "^29.2.5",
+    "typescript": "^5.6.3"
+  }
+}

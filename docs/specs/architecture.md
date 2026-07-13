@@ -92,3 +92,14 @@ syntactically and architecturally consistent with Esri's official samples,
 but changes should be verified end-to-end in a real builder before being
 considered done — see [`../known-issues.md`](../known-issues.md) for what
 hasn't been verified yet.
+
+To narrow that gap, logic that has no actual jimu/ArcGIS dependency (panel
+drag/resize/fold geometry, pan-to-marker-angle conversion, date formatting,
+multipass timeline derivation, plus the pre-existing `services/jakarto.ts`
+and `lib/observerIcon.ts`) lives in `src/runtime/lib/`/`src/runtime/services/`
+and is covered by real, passing Jest tests, runnable via `npm test` from the
+repo root — no Developer Edition needed. `widget.tsx`/`setting.tsx` stay
+untested beyond a `tsc --noEmit` sanity check against ambient jimu stubs
+(`npm run widget-check`); their JSX/render tree and jimu/ArcGIS wiring still
+require a real Developer Edition to verify. See
+[ADR-0011](../adr/0011-extract-pure-logic-for-unit-testing.md).

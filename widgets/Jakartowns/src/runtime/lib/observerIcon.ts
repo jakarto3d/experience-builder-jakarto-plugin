@@ -71,3 +71,26 @@ export function buildObserverIconSvg(fovDegrees: number): string {
 export function buildObserverIconDataUrl(fovDegrees: number): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(buildObserverIconSvg(fovDegrees))}`
 }
+
+/**
+ * Converts the Jakartowns pan (0 = North, counter-clockwise — see
+ * buildJakartownsUrl in services/jakarto.ts) into a rotation angle for an
+ * ArcGIS symbol (`PictureMarkerSymbol.angle`), expressed in degrees
+ * clockwise from North — same convention as `heading` on jakui's
+ * ObserverIcon, confirmed by its props documentation ("0 points up,
+ * positive values rotate clockwise").
+ */
+export function jakartownsPanToMarkerAngle(panRadians: number): number {
+  const degrees = 360 - (panRadians * 180) / Math.PI
+  return ((degrees % 360) + 360) % 360
+}
+
+/**
+ * Rounds a fov to the given precision before regenerating the icon (avoids
+ * rebuilding the SVG on every micro-variation of zoom inside the panorama).
+ * Falls back to DEFAULT_OBSERVER_FOV when no fov is known yet.
+ */
+export function roundObserverFov(fovDegrees: number | null, precision: number): number {
+  if (fovDegrees == null) return DEFAULT_OBSERVER_FOV
+  return Math.round(fovDegrees * precision) / precision
+}
