@@ -47,3 +47,10 @@ The detailed day-by-day change history remains available via `git log`
 
 Useful external resource: [Getting started with widget development](https://developers.arcgis.com/experience-builder/guide/getting-started-widget/)
 (ArcGIS Experience Builder Developer Guide).
+
+## Acknowledgments
+
+<img src="https://mascouche.ca/storage/app/media/uploaded-files/logo-ville-de-mascouche-2025-noir-95-rgb.png" alt="Ville de Mascouche" width="220">
+
+This widget exists thanks to the **Ville de Mascouche**, who commissioned its
+development. Thank you for making it possible.
