@@ -75,10 +75,16 @@ every tick, since the mouse can fire `rotation` very frequently. A separate,
 lightweight `onOrientationChange` callback exists specifically to drive the
 map's orientation indicator without that churn — see
 [ADR-0009](../adr/0009-heading-applied-via-symbol-angle.md). `setPan` is
-also written to once, in reaction to the `position` event that follows a
-picking-mode/right-click locate, to override the auto-rotation the
-Jakartowns API applies internally on `setPosition` — see
-[ADR-0012](../adr/0012-heading-towards-clicked-point-after-locate.md).
+also written in reaction to the `position` event that follows a
+picking-mode/right-click locate or a multipass image switch, then
+reasserted against every subsequent `rotation` event for up to 800ms, to
+override the auto-rotation the Jakartowns API applies internally on
+`setPosition` and `setImage` alike (both commit the same `updatePosition`
+mutation internally, and exactly when its effect settles relative to a
+single corrective call proved unreliable in practice) — see
+[ADR-0012](../adr/0012-heading-towards-clicked-point-after-locate.md),
+[ADR-0013](../adr/0013-reimplement-orientation-preservation-on-image-switch.md)
+and [ADR-0014](../adr/0014-reassert-heading-against-repeated-clobbers.md).
 
 ## 5. URL API (fallback / "Open in Jakartowns" button)
 

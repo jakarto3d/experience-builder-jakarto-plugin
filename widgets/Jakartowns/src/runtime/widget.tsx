@@ -20,7 +20,7 @@ import {
   jakartownsPanToMarkerAngle,
   roundObserverFov
 } from './lib/observerIcon'
-import { getJakartownsPanTowards } from './lib/bearing'
+import { getJakartownsPanTowards, angularDifference } from './lib/bearing'
 import {
   computeDefaultFullSize,
   computeDragPosition,
@@ -203,14 +203,39 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const positionGraphicsLayerRef = React.useRef<any>(null)
   const positionGraphicRef = React.useRef<any>(null)
   const lastKnownPositionRef = React.useRef<JakartoPosition | null>(null)
-  // Set by picking mode / right-click, consumed by the next `position`
-  // event. The Jakartowns API's own setPosition briefly computes a correct
-  // look-at pan itself, then clobbers it via an internal auto-rotation
+  // Set by picking mode / right-click (aim at a specific clicked point) or
+  // a multipass timeline switch (carry the current pan forward, since pan
+  // is already an absolute compass bearing, not relative to any position —
+  // "look the same direction" from a nearby sphere needs no geometry
+  // beyond that). Consumed by the `position` event that follows, and then
+  // re-asserted against every subsequent `rotation` event for a short
+  // window: the Jakartowns API's own setPosition/setImage briefly compute
+  // a pan themselves then clobber it via an internal auto-rotation
   // (state.observer.autoRotation, left at its default `true` by the public
-  // API — see lib/bearing.ts) once the sphere finishes loading; that
-  // clobber always resolves before the `position` event fires, so
-  // re-applying our own pan in reaction to that event reliably wins.
-  const pendingHeadingTargetRef = React.useRef<JakartoPosition | null>(null)
+  // API), and exactly when that clobber settles relative to our own
+  // one-shot correction has proven unreliable in practice — reasserting
+  // until it actually sticks sidesteps needing to know the exact timing.
+  // See ADR-0013/0014.
+  type PendingHeading = { kind: 'target', target: JakartoPosition } | { kind: 'pan', pan: number }
+  const pendingHeadingRef = React.useRef<PendingHeading | null>(null)
+  const pendingHeadingDeadlineRef = React.useRef<number>(0)
+  // Long enough to outlast the internal transition (a fast/short one, per
+  // the jakartowns-viewer source), short enough to minimize the window
+  // where a genuine user drag right after a switch could get overridden —
+  // reasserting stops the instant the reported pan matches ours anyway.
+  const PENDING_HEADING_TIMEOUT_MS = 800
+  const PENDING_HEADING_TOLERANCE_RADIANS = 0.01
+
+  const resolvePendingHeadingPan = React.useCallback((position: JakartoPosition): number | null => {
+    const pending = pendingHeadingRef.current
+    if (!pending) return null
+    return pending.kind === 'target' ? getJakartownsPanTowards(position, pending.target) : pending.pan
+  }, [])
+
+  const armPendingHeading = React.useCallback((pending: PendingHeading | null) => {
+    pendingHeadingRef.current = pending
+    pendingHeadingDeadlineRef.current = pending ? Date.now() + PENDING_HEADING_TIMEOUT_MS : 0
+  }, [])
   const observerIconUrlRef = React.useRef<string | null>(null)
   const observerIconFovRef = React.useRef<number | null>(null)
 
@@ -279,7 +304,20 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   }
 
   const handleSelectImage = (imageId: string) => {
-    viewerHandleRef.current?.setImage(imageId)
+    const handle = viewerHandleRef.current
+    if (!handle) return
+
+    // Multipass images "at the same location" aren't necessarily captured
+    // from the exact same spot (different lane, a few meters off), but
+    // pan is an absolute compass bearing, not relative to position — so
+    // carrying the current pan forward already points at roughly the same
+    // distant scenery once the new image's position is confirmed, instead
+    // of leaving whatever heading the sphere's internal auto-rotation
+    // defaults to. See ADR-0013.
+    const currentPan = handle.getViewState().pan
+    armPendingHeading(currentPan != null ? { kind: 'pan', pan: currentPan } : null)
+
+    handle.setImage(imageId)
   }
 
   const handleOpenInJakartowns = () => {
@@ -388,12 +426,15 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           setCurrentPosition(position)
           lastKnownPositionRef.current = position
 
-          const headingTarget = pendingHeadingTargetRef.current
-          if (headingTarget) {
-            pendingHeadingTargetRef.current = null
-            const pan = getJakartownsPanTowards(position, headingTarget)
-            viewerHandleRef.current?.setPan(pan)
-            updatePositionMarker(position, pan, state.fov)
+          // Deliberately does NOT clear pendingHeadingRef here: the
+          // Jakartowns API's own internal auto-rotation can still overwrite
+          // this shortly after `position` fires, so onOrientationChange
+          // keeps reasserting against every subsequent `rotation` event
+          // until it actually sticks (or times out) — see the ref's comment.
+          const pendingPan = resolvePendingHeadingPan(position)
+          if (pendingPan != null) {
+            viewerHandleRef.current?.setPan(pendingPan)
+            updatePositionMarker(position, pendingPan, state.fov)
           } else {
             updatePositionMarker(position, state.pan, state.fov)
           }
@@ -403,9 +444,26 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
         setAvailableImages(state.availableImages)
       },
       onOrientationChange: (pan, fov) => {
-        if (lastKnownPositionRef.current) {
-          updatePositionMarker(lastKnownPositionRef.current, pan, fov)
+        const position = lastKnownPositionRef.current
+        if (!position) return
+
+        if (pendingHeadingRef.current) {
+          if (Date.now() > pendingHeadingDeadlineRef.current) {
+            pendingHeadingRef.current = null
+          } else {
+            const targetPan = resolvePendingHeadingPan(position)
+            if (targetPan != null && (pan == null || Math.abs(angularDifference(pan, targetPan)) > PENDING_HEADING_TOLERANCE_RADIANS)) {
+              viewerHandleRef.current?.setPan(targetPan)
+              updatePositionMarker(position, targetPan, fov)
+              return
+            }
+            // Matches for now — but keep watching until the deadline: this
+            // event may just be the synchronous echo of our own setPan
+            // call above, not confirmation that a later, genuinely
+            // independent internal clobber won't still land.
+          }
         }
+        updatePositionMarker(position, pan, fov)
       }
     }).then((handle) => {
       if (cancelled) {
@@ -438,8 +496,8 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       // The viewer relocates to the nearest available panorama sphere near
       // this point (not necessarily exactly on it): once that new position
       // is confirmed, the heading is turned to face the point that was
-      // actually clicked — see pendingHeadingTargetRef.
-      pendingHeadingTargetRef.current = position
+      // actually clicked — see pendingHeadingRef.
+      armPendingHeading({ kind: 'target', target: position })
       viewerHandleRef.current?.setPosition(position)
     }
 
@@ -462,7 +520,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       clickHandle.remove()
       view.container?.removeEventListener('contextmenu', onContextMenu)
     }
-  }, [jimuMapView, settings.rightClickToLocate])
+  }, [jimuMapView, settings.rightClickToLocate, armPendingHeading])
 
   const handleTitleBarPointerDown = (event: React.PointerEvent) => {
     // Without this guard, clicking a title-bar button (logout, fold) would still

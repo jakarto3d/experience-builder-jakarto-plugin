@@ -1,4 +1,4 @@
-import { getJakartownsPanTowards } from './bearing'
+import { getJakartownsPanTowards, reflectAngle, angularDifference } from './bearing'
 
 describe('getJakartownsPanTowards', () => {
   const origin = { latitude: 45, longitude: -73 }
@@ -17,5 +17,42 @@ describe('getJakartownsPanTowards', () => {
 
   it('returns 3*PI/2 (East) when the target is due east', () => {
     expect(getJakartownsPanTowards(origin, { latitude: 45, longitude: -72.999 })).toBeCloseTo((3 * Math.PI) / 2)
+  })
+})
+
+describe('reflectAngle', () => {
+  it('leaves North (0) unchanged', () => {
+    expect(reflectAngle(0)).toBeCloseTo(0)
+  })
+
+  it('maps standard East (PI/2) to Jakartowns West-side pan (3*PI/2)', () => {
+    expect(reflectAngle(Math.PI / 2)).toBeCloseTo((3 * Math.PI) / 2)
+  })
+
+  it('leaves South (PI) unchanged', () => {
+    expect(reflectAngle(Math.PI)).toBeCloseTo(Math.PI)
+  })
+
+  it('is its own inverse', () => {
+    const angle = 1.234
+    expect(reflectAngle(reflectAngle(angle))).toBeCloseTo(angle)
+  })
+})
+
+describe('angularDifference', () => {
+  it('returns 0 for identical angles', () => {
+    expect(angularDifference(1, 1)).toBeCloseTo(0)
+  })
+
+  it('returns a small difference across the 0/2*PI wraparound', () => {
+    expect(angularDifference(0, 2 * Math.PI - 0.001)).toBeCloseTo(0.001)
+  })
+
+  it('returns PI for opposite angles', () => {
+    expect(Math.abs(angularDifference(0, Math.PI))).toBeCloseTo(Math.PI)
+  })
+
+  it('is antisymmetric', () => {
+    expect(angularDifference(0.5, 2)).toBeCloseTo(-angularDifference(2, 0.5))
   })
 })

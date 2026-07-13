@@ -25,7 +25,9 @@ declare module 'jimu-core' {
     [key: string]: any
   }
 
-  export type ImmutableObject<T> = T
+  export type ImmutableObject<T> = T & {
+    set: <K extends keyof T>(key: K, value: T[K]) => ImmutableObject<T>
+  }
 }
 
 declare module 'jimu-arcgis' {
@@ -44,6 +46,12 @@ declare module 'jimu-for-builder' {
     onSettingChange: (settingChange: { id: string, useMapWidgetIds?: string[], config?: T, [key: string]: any }) => void
     [key: string]: any
   }
+}
+
+declare module 'jimu-ui' {
+  import * as ReactNS from 'react'
+
+  export const Switch: ReactNS.ComponentType<any>
 }
 
 declare module 'jimu-ui/advanced/setting-components' {

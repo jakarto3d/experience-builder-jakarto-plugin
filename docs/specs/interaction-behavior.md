@@ -41,9 +41,12 @@ Two ways to point the panorama at a map location:
 Both relocate the viewer to the nearest available panorama sphere near the
 clicked point (not necessarily exactly on it); once that new position is
 confirmed, the heading is turned to face the point that was actually
-clicked — see [ADR-0012](../adr/0012-heading-towards-clicked-point-after-locate.md).
-This is a one-shot adjustment: it doesn't keep re-aiming at that point as
-the user navigates further inside the panorama.
+clicked, and reasserted for up to 800ms against the Jakartowns API's own
+internal auto-rotation if needed — see
+[ADR-0012](../adr/0012-heading-towards-clicked-point-after-locate.md) and
+[ADR-0014](../adr/0014-reassert-heading-against-repeated-clobbers.md). Past
+that short window, it doesn't keep re-aiming at that point as the user
+navigates further inside the panorama.
 
 Navigating inside the panorama does **not** move the map back — see
 [ADR-0005](../adr/0005-no-auto-recenter-on-panorama-navigation.md). Instead,
@@ -60,7 +63,14 @@ repositioned/reoriented `Graphic` — see
   even when there's only one.
 - Left/right arrow buttons scroll the strip; disabled when there's nothing
   to scroll.
-- Clicking a chip calls `setImage(imageId)` on the viewer.
+- Clicking a chip calls `setImage(imageId)` on the viewer. The current pan
+  is carried forward to the new image once its position is confirmed (and
+  reasserted for up to 800ms against the sphere's own auto-rotation if
+  needed), instead of resetting to the sphere's default heading — see
+  [ADR-0013](../adr/0013-reimplement-orientation-preservation-on-image-switch.md)
+  and [ADR-0014](../adr/0014-reassert-heading-against-repeated-clobbers.md).
+  An approximation (exact for a subject far from both capture points,
+  which is the common case), not a guaranteed identical frame.
 
 ## Authentication
 
@@ -82,8 +92,5 @@ Disabled until an image is loaded.
 
 - Real Picture-in-Picture (panel leaving the browser window) — see
   [ADR-0007](../adr/0007-defer-real-picture-in-picture.md).
-- Camera orientation preservation when switching multipass images — was
-  implemented and reverted, see
-  [ADR-0010](../adr/0010-revert-orientation-preservation-on-image-switch.md).
 - Message Actions (publishing panorama position changes to other widgets) —
   see [ADR-0002](../adr/0002-js-api-integration-via-jimumapviewcomponent.md).
