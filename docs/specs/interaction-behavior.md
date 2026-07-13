@@ -38,6 +38,13 @@ Two ways to point the panorama at a map location:
   context menu. The setting persists in `localStorage`
   (`jakartowns-viewer:settings`).
 
+Both relocate the viewer to the nearest available panorama sphere near the
+clicked point (not necessarily exactly on it); once that new position is
+confirmed, the heading is turned to face the point that was actually
+clicked — see [ADR-0012](../adr/0012-heading-towards-clicked-point-after-locate.md).
+This is a one-shot adjustment: it doesn't keep re-aiming at that point as
+the user navigates further inside the panorama.
+
 Navigating inside the panorama does **not** move the map back — see
 [ADR-0005](../adr/0005-no-auto-recenter-on-panorama-navigation.md). Instead,
 a position/orientation indicator on the map updates on every `position` /

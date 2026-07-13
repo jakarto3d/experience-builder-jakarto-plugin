@@ -69,12 +69,16 @@ Jakartowns widgets on the same page would receive each other's events. This
 is a limitation of the Jakartowns library itself, not something fixable from
 this widget (see [`../known-issues.md`](../known-issues.md)).
 
-`pan`/`tilt`/`fov` are only read via `getViewState()` (used to build the
-"Open in Jakartowns" URL); they intentionally do not trigger a React
-re-render on every tick, since the mouse can fire `rotation` very
-frequently. A separate, lightweight `onOrientationChange` callback exists
-specifically to drive the map's orientation indicator without that churn —
-see [ADR-0009](../adr/0009-heading-applied-via-symbol-angle.md).
+`pan`/`tilt`/`fov` are read via `getViewState()` (used to build the "Open in
+Jakartowns" URL); they intentionally do not trigger a React re-render on
+every tick, since the mouse can fire `rotation` very frequently. A separate,
+lightweight `onOrientationChange` callback exists specifically to drive the
+map's orientation indicator without that churn — see
+[ADR-0009](../adr/0009-heading-applied-via-symbol-angle.md). `setPan` is
+also written to once, in reaction to the `position` event that follows a
+picking-mode/right-click locate, to override the auto-rotation the
+Jakartowns API applies internally on `setPosition` — see
+[ADR-0012](../adr/0012-heading-towards-clicked-point-after-locate.md).
 
 ## 5. URL API (fallback / "Open in Jakartowns" button)
 

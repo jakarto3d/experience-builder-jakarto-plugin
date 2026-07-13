@@ -37,3 +37,4 @@ messages follow a `feat(widget)`/`fix(widget)`/`docs` convention.
 | [`adr/0009`](adr/0009-heading-applied-via-symbol-angle.md) | Heading via `PictureMarkerSymbol.angle` |
 | [`adr/0010`](adr/0010-revert-orientation-preservation-on-image-switch.md) | Reverting orientation preservation on image switch |
 | [`adr/0011`](adr/0011-extract-pure-logic-for-unit-testing.md) | Extracting pure logic for unit testing, root-level Jest harness |
+| [`adr/0012`](adr/0012-heading-towards-clicked-point-after-locate.md) | Orienting heading towards the clicked point after picking/right-click |

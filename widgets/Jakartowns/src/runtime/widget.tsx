@@ -20,6 +20,7 @@ import {
   jakartownsPanToMarkerAngle,
   roundObserverFov
 } from './lib/observerIcon'
+import { getJakartownsPanTowards } from './lib/bearing'
 import {
   computeDefaultFullSize,
   computeDragPosition,
@@ -202,6 +203,14 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const positionGraphicsLayerRef = React.useRef<any>(null)
   const positionGraphicRef = React.useRef<any>(null)
   const lastKnownPositionRef = React.useRef<JakartoPosition | null>(null)
+  // Set by picking mode / right-click, consumed by the next `position`
+  // event. The Jakartowns API's own setPosition briefly computes a correct
+  // look-at pan itself, then clobbers it via an internal auto-rotation
+  // (state.observer.autoRotation, left at its default `true` by the public
+  // API — see lib/bearing.ts) once the sphere finishes loading; that
+  // clobber always resolves before the `position` event fires, so
+  // re-applying our own pan in reaction to that event reliably wins.
+  const pendingHeadingTargetRef = React.useRef<JakartoPosition | null>(null)
   const observerIconUrlRef = React.useRef<string | null>(null)
   const observerIconFovRef = React.useRef<number | null>(null)
 
@@ -377,7 +386,16 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           const position = { latitude: state.latitude, longitude: state.longitude }
           setCurrentPosition(position)
           lastKnownPositionRef.current = position
-          updatePositionMarker(position, state.pan, state.fov)
+
+          const headingTarget = pendingHeadingTargetRef.current
+          if (headingTarget) {
+            pendingHeadingTargetRef.current = null
+            const pan = getJakartownsPanTowards(position, headingTarget)
+            viewerHandleRef.current?.setPan(pan)
+            updatePositionMarker(position, pan, state.fov)
+          } else {
+            updatePositionMarker(position, state.pan, state.fov)
+          }
         }
         setCurrentDate(state.date)
         setCurrentImageId(state.imageId)
@@ -416,6 +434,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       if (!mapPoint) return
       const position = { latitude: mapPoint.latitude, longitude: mapPoint.longitude }
       setCurrentPosition(position)
+      // The viewer relocates to the nearest available panorama sphere near
+      // this point (not necessarily exactly on it): once that new position
+      // is confirmed, the heading is turned to face the point that was
+      // actually clicked — see pendingHeadingTargetRef.
+      pendingHeadingTargetRef.current = position
       viewerHandleRef.current?.setPosition(position)
     }
 

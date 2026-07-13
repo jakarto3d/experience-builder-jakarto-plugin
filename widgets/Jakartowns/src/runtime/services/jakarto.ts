@@ -253,6 +253,12 @@ export interface InitializeViewerOptions {
 export interface JakartoViewerHandle {
   /** Moves the panorama view — used for map → Jakartowns synchronization. */
   setPosition: (position: JakartoPosition) => void
+  /**
+   * Sets the horizontal rotation (0 = North, π/2 = West — see
+   * buildJakartownsUrl below). Used to override the pan the Jakartowns API
+   * auto-rotates to after a setPosition call — see lib/bearing.ts.
+   */
+  setPan: (panRadians: number) => void
   /** Displays a specific image among those available at the same spot (multipass). */
   setImage: (imageId: string) => void
   /** Synchronous snapshot of the current state (position, image, orientation) — used when clicking "Open in Jakartowns". */
@@ -390,6 +396,10 @@ export async function initializeViewer(
               return
             }
             viewer.setPosition({ latitude: lat, longitude: lng })
+          },
+          setPan: (panRadians) => {
+            if (destroyed) return
+            viewer.setPan(panRadians)
           },
           setImage: (imageId) => {
             if (destroyed) return
