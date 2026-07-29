@@ -1,0 +1,5 @@
+# Defaults for running the workflows locally with act (https://github.com/nektos/act).
+# The default "micro" runner image has no zip/unzip and no browser dependencies,
+# which the release job needs.
+-P ubuntu-latest=catthehacker/ubuntu:act-latest
+--artifact-server-path /tmp/act-artifacts
