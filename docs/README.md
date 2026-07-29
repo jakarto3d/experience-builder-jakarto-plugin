@@ -40,3 +40,4 @@ messages follow a `feat(widget)`/`fix(widget)`/`docs` convention.
 | [`adr/0012`](adr/0012-heading-towards-clicked-point-after-locate.md) | Orienting heading towards the clicked point after picking/right-click |
 | [`adr/0013`](adr/0013-reimplement-orientation-preservation-on-image-switch.md) | Reimplementing orientation preservation on multipass image switch |
 | [`adr/0014`](adr/0014-reassert-heading-against-repeated-clobbers.md) | Reasserting heading against repeated auto-rotation clobbers |
+| [`adr/0015`](adr/0015-automate-portal-ready-release-build.md) | Automating a portal-ready build in the release workflow |

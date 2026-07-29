@@ -29,13 +29,49 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Package widget
+      - name: Package source-only zip
         run: |
           cd widgets
           zip -r "../Jakartowns-${GITHUB_REF_NAME}.zip" Jakartowns
 
+      # ArcGIS Experience Builder's own `npm start`/`build:prod` require this
+      # exact Node version (newer Node breaks on a `tinyglobby` error), so the
+      # whole SDK build lives in its own job step using it — see
+      # widgets/Jakartowns/README.md for the same constraint on local dev.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+
+      - name: Resolve the ArcGIS Experience Builder SDK version to build against
+        id: exb
+        run: |
+          VERSION=$(node -p "require('./widgets/Jakartowns/manifest.json').exbVersion.split('.').slice(0, 2).join('.')")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Download the ArcGIS Experience Builder SDK
+        run: node scripts/fetch-exb-sdk.mjs "${{ steps.exb.outputs.version }}" exb-sdk.zip
+
+      - name: Build the widget against the SDK
+        run: |
+          unzip -q exb-sdk.zip -d exb-sdk
+          cd exb-sdk/ArcGISExperienceBuilder/client
+          npm install
+          mkdir -p your-extensions/widgets
+          cp -r "$GITHUB_WORKSPACE/widgets/Jakartowns" your-extensions/widgets/Jakartowns
+          npm run build:prod
+
+      - name: Package portal-ready zip
+        run: |
+          cd exb-sdk/ArcGISExperienceBuilder/client/dist-prod/widgets
+          zip -r "$GITHUB_WORKSPACE/Jakartowns-${GITHUB_REF_NAME}-portal.zip" Jakartowns
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          files: Jakartowns-${{ github.ref_name }}.zip
+          files: |
+            Jakartowns-${{ github.ref_name }}.zip
+            Jakartowns-${{ github.ref_name }}-portal.zip
           generate_release_notes: true

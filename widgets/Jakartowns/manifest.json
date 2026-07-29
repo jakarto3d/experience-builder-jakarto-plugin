@@ -2,7 +2,7 @@
   "name": "Jakartowns",
   "type": "widget",
   "version": "1.0.1",
-  "exbVersion": "1.16.0",
+  "exbVersion": "1.14.0",
   "author": "Jakarto",
   "description": "Affiche le panorama Jakartowns synchronisé avec une carte ArcGIS liée : un clic sur la carte déplace le panorama, une navigation dans le panorama recentre la carte.",
   "copyright": "© Jakarto",
