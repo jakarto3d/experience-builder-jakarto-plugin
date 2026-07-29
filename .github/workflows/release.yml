@@ -4,6 +4,19 @@ on:
   push:
     tags:
       - "v*"
+  # Lets the whole pipeline be rehearsed from the Actions tab (or `gh workflow
+  # run release.yml`) without tagging anything: the artifacts are built and
+  # uploaded to the run, but no GitHub release is created. `just build-release`
+  # does the same thing on your own machine.
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Name to build the zips under (dry run — no release is published)"
+        required: false
+        default: "dry-run"
+
+env:
+  TAG: ${{ github.ref_type == 'tag' && github.ref_name || inputs.tag }}
 
 jobs:
   test:
@@ -29,13 +42,47 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Package widget
+      # ArcGIS Experience Builder's own build requires this exact Node version
+      # (newer Node breaks on a `tinyglobby` error) — see the same constraint
+      # in widgets/Jakartowns/README.md and in scripts/build-release.mjs.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20.20.2
+
+      - run: npm ci
+
+      - name: Resolve the ArcGIS Experience Builder SDK version to build against
+        id: exb
         run: |
-          cd widgets
-          zip -r "../Jakartowns-${GITHUB_REF_NAME}.zip" Jakartowns
+          VERSION=$(node -p "require('./widgets/Jakartowns/manifest.json').exbVersion.split('.').slice(0, 2).join('.')")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # Esri mints a per-click, time-limited download URL, so fetching the SDK
+      # costs a headless Chromium; caching the zip skips both on repeat runs.
+      - name: Cache the Experience Builder SDK download
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: .exb-cache/arcgis-experience-builder-${{ steps.exb.outputs.version }}.zip
+          key: exb-sdk-${{ steps.exb.outputs.version }}
+
+      - name: Install Chromium to fetch the SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Build the release artifacts
+        run: node scripts/build-release.mjs --tag "$TAG"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Jakartowns-${{ env.TAG }}
+          path: dist-release/*.zip
 
       - name: Create GitHub release
+        # Only a real tag publishes; `!env.ACT` keeps local `act` runs from
+        # trying to publish to the real repository.
+        if: github.ref_type == 'tag' && !env.ACT
         uses: softprops/action-gh-release@v2
         with:
-          files: Jakartowns-${{ github.ref_name }}.zip
+          files: dist-release/*.zip
           generate_release_notes: true

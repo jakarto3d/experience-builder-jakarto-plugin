@@ -1,3 +1,6 @@
 esri_js_sdk_demo/
 node_modules/
 /coverage
+# Local release rehearsals: built zips and the cached Experience Builder SDK.
+/dist-release
+/.exb-cache

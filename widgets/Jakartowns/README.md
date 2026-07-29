@@ -45,6 +45,21 @@ into the web extension repo of an existing Developer Edition installation.
    page that already contains a **Map** widget.
 5. In the widget settings, select the Map widget to bind to (`Linked map`).
 
+## Deploying to an ArcGIS Enterprise portal
+
+Registering this widget as a custom widget resource in a real ArcGIS
+Enterprise portal (as opposed to running it locally via `npm start` above)
+requires the **built** widget (`dist/`), not the source. Each
+[GitHub release](../../../../releases) publishes two zips for this reason:
+
+- `Jakartowns-<tag>.zip` — source only, for copying into
+  `client/your-extensions/widgets/` as described above.
+- `Jakartowns-<tag>-portal.zip` — built against the ArcGIS Experience
+  Builder SDK version declared in `manifest.json`'s `exbVersion`; this is
+  the one to hand to whoever registers the custom widget on the portal (see
+  [ADR-0015](../../docs/adr/0015-automate-portal-ready-release-build.md)
+  for how it's produced).
+
 ## Usage
 
 - A visitor must provide their own Jakarto API key (obtainable from
