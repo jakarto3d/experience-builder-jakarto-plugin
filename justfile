@@ -1,3 +1,7 @@
+# List the available recipes (default when run with no arguments).
+_default:
+    @just --list
+
 # Run the checks CI runs on every push and pull request.
 check:
     npm test
