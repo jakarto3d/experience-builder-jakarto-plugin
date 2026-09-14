@@ -60,6 +60,22 @@ requires the **built** widget (`dist/`), not the source. Each
   [ADR-0015](../../docs/adr/0015-automate-portal-ready-release-build.md)
   for how it's produced).
 
+## Knowing when to update
+
+A portal never learns on its own that a new version was published — the zip
+was uploaded by hand and stays at that version. So the widget says it
+itself: opening its **settings panel in the builder** shows a **"Version du
+widget"** section with the installed version and, when a newer release
+exists, the version to get and a link to its release page. From there, the
+procedure is the one above: download `Jakartowns-v<version>-portal.zip` and
+replace the custom widget's file in the portal.
+
+The check is builder-side only (nothing is requested from the published
+experience), anonymous, cached 24 hours, and silent if it fails: a portal
+with no outbound access to `api.github.com` simply shows "mise à jour non
+vérifiable" instead of an error. See
+[ADR-0017](../../docs/adr/0017-in-builder-update-notification.md).
+
 ## Usage
 
 - A visitor must provide their own Jakarto API key (obtainable from

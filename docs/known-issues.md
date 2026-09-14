@@ -27,6 +27,13 @@ into an ADR if it changes a decision.
   `tilt`/`fov` on `window`, not scoped per instance. Two Jakartowns widgets
   on the same page would receive each other's events. This is a limitation
   of the Jakartowns library itself — not fixable from this widget.
+- **Update notice rendering**: the "Version du widget" section
+  ([ADR-0017](adr/0017-in-builder-update-notification.md)) type-checks
+  against the real jimu types and builds into the portal bundle, but its
+  layout in the settings panel (the `Alert` and the link inside a
+  `SettingRow flow="wrap"`) hasn't been looked at in a running builder yet.
+  Its "update available" state can only be seen once a release newer than
+  the installed version exists — until then it renders "À jour".
 - **Vector-tile availability layer**: removed due to a CORS/cookie
   limitation (see [ADR-0006](adr/0006-remove-jakman-availability-layer.md)).
   Would need Jakarto to expose that endpoint with cross-origin support (or a

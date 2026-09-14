@@ -29,6 +29,8 @@ client/
                 │   └── translations/default.ts
                 └── setting/
                     ├── setting.tsx
+                    ├── components/UpdateNotice.tsx
+                    ├── lib/updateCheck.ts
                     └── translations/default.ts
 ```
 
@@ -84,7 +86,19 @@ for why this pattern was chosen over Message Actions or an iframe.
   from another internal Jakarto component's Observer Icon). See
   [ADR-0009](../adr/0009-heading-applied-via-symbol-angle.md).
 
-## 5. Validation limits
+## 5. Setting components
+
+- **`setting.tsx`** — the settings panel: the `MapWidgetSelector` binding
+  (section 3), the panorama options backed by `config.json`, and the
+  "Version du widget" section.
+- **`components/UpdateNotice.tsx` + `lib/updateCheck.ts`** — compares
+  `props.manifest.version` (injected by the framework) against the latest
+  published GitHub release, so whoever installed the widget on a portal
+  learns that a newer zip exists. Builder-side only, cached 24 h in
+  `localStorage` (`jakartowns-viewer:latestRelease`), and silent on failure
+  — see [ADR-0017](../adr/0017-in-builder-update-notification.md).
+
+## 6. Validation limits
 
 Without a local Developer Edition, `jimu-core` / `jimu-ui` / `jimu-arcgis`
 cannot be installed as regular npm dependencies. Code here is written to be
@@ -96,8 +110,10 @@ hasn't been verified yet.
 To narrow that gap, logic that has no actual jimu/ArcGIS dependency (panel
 drag/resize/fold geometry, pan-to-marker-angle conversion, date formatting,
 multipass timeline derivation, plus the pre-existing `services/jakarto.ts`
-and `lib/observerIcon.ts`) lives in `src/runtime/lib/`/`src/runtime/services/`
-and is covered by real, passing Jest tests, runnable via `npm test` from the
+and `lib/observerIcon.ts`, and the release-version comparison in
+`src/setting/lib/updateCheck.ts`) lives in `src/runtime/lib/`,
+`src/runtime/services/` and `src/setting/lib/`, and is covered by real,
+passing Jest tests, runnable via `npm test` from the
 repo root — no Developer Edition needed. `widget.tsx`/`setting.tsx` stay
 untested beyond a `tsc --noEmit` sanity check against ambient jimu stubs
 (`npm run widget-check`); their JSX/render tree and jimu/ArcGIS wiring still

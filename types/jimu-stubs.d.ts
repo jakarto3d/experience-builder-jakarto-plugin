@@ -52,6 +52,7 @@ declare module 'jimu-ui' {
   import * as ReactNS from 'react'
 
   export const Switch: ReactNS.ComponentType<any>
+  export const Alert: ReactNS.ComponentType<any>
 }
 
 declare module 'jimu-ui/advanced/setting-components' {

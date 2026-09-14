@@ -7,7 +7,8 @@ module.exports = {
   testMatch: ['**/*.test.ts'],
   collectCoverageFrom: [
     'widgets/Jakartowns/src/runtime/lib/**/*.ts',
-    'widgets/Jakartowns/src/runtime/services/**/*.ts'
+    'widgets/Jakartowns/src/runtime/services/**/*.ts',
+    'widgets/Jakartowns/src/setting/lib/**/*.ts'
   ],
   transform: {
     '^.+\\.ts$': ['ts-jest', { tsconfig: '<rootDir>/tsconfig.test.json' }]
