@@ -244,6 +244,22 @@
   cursor: pointer;
 }
 
+.jakartowns-viewer-settings-row + .jakartowns-viewer-settings-row {
+  margin-top: 8px;
+}
+
+.jakartowns-viewer-settings-row--select {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.jakartowns-viewer-settings-row--select select {
+  min-width: 0;
+  max-width: 60%;
+  font: inherit;
+  color: inherit;
+}
+
 .jakartowns-viewer-panel-body {
   /*
    * flex:1 — occupies all the space remaining below the title bar (which

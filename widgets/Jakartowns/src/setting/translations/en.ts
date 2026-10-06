@@ -6,6 +6,8 @@ const messages: typeof defaultMessages = {
   linkedMapSectionTitle: 'Linked map',
   panoramaSectionTitle: 'Panorama',
   compassEnabledLabel: 'Show compass',
+  defaultLanguageLabel: 'Default language',
+  languageAutoOption: 'Automatic (follow Experience Builder’s language)',
   versionSectionTitle: 'Widget version',
   installedVersionLabel: 'Installed version',
   versionCheckingLabel: 'Checking…',

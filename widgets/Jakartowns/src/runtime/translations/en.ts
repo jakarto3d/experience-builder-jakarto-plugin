@@ -22,6 +22,8 @@ const messages: typeof defaultMessages = {
   timelineScrollPrevious: 'Previous dates',
   timelineScrollNext: 'Next dates',
   settingsLabel: 'Settings',
+  languageLabel: 'Language',
+  languageUseDefault: 'Default',
   settingsRightClickLabel: 'Enable right-click on the map to locate the panorama',
   panoramaWaitingForPick: 'Press “Click on the map”, then click the map, to display a Jakartowns panorama.'
 }

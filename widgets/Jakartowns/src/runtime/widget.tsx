@@ -33,10 +33,12 @@ import {
 } from './lib/panelGeometry'
 import { buildTimelineEntries } from './lib/timeline'
 import { formatJakartoDate } from './lib/format'
-import { pickMessages } from '../lib/locale'
+import { isLanguage, resolveLanguage } from '../lib/locale'
 import frMessages from './translations/default'
 import enMessages from './translations/en'
 import './widget.css'
+
+const MESSAGES = { fr: frMessages, en: enMessages }
 
 // panelSize.height is the panel's TOTAL height (title bar included), not
 // just the panorama's: the title bar always keeps its natural size
@@ -119,7 +121,6 @@ const IconGear = () => (
  */
 const Widget = (props: AllWidgetProps<IMConfig>) => {
   const { useMapWidgetIds, config, locale } = props
-  const messages = pickMessages(locale, { fr: frMessages, en: enMessages })
   const hasLinkedMap = !!(useMapWidgetIds && useMapWidgetIds.length > 0)
 
   const widgetRootRef = React.useRef<HTMLDivElement>(null)
@@ -168,7 +169,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const [isAuthenticated, setIsAuthenticated] = React.useState(false)
   const [apiKeyInput, setApiKeyInput] = React.useState('')
-  const [authError, setAuthError] = React.useState('')
+  const [authFailed, setAuthFailed] = React.useState(false)
   const [authLoading, setAuthLoading] = React.useState(false)
 
   const viewerContainerRef = React.useRef<HTMLDivElement>(null)
@@ -176,6 +177,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const timelineListRef = React.useRef<HTMLDivElement>(null)
 
   const [settings, setSettings] = React.useState<JakartoWidgetSettings>(() => getStoredSettings())
+  // The end-user's own pick wins over the admin's default, which wins over
+  // Experience Builder's locale (see lib/locale.ts).
+  const language = resolveLanguage(locale, { adminDefault: config.language, userChoice: settings.language })
+  const messages = MESSAGES[language]
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
   // Covers the gear button AND the popover (not just the popover): otherwise
   // clicking the button itself while the popover is open counts as an
@@ -265,10 +270,19 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     return () => document.removeEventListener('pointerdown', onPointerDownOutside)
   }, [isSettingsOpen])
 
-  const handleToggleRightClickSetting = (checked: boolean) => {
-    const next = { ...settings, rightClickToLocate: checked }
+  const updateSettings = (patch: Partial<JakartoWidgetSettings>) => {
+    const next = { ...settings, ...patch }
     setSettings(next)
     storeSettings(next)
+  }
+
+  const handleToggleRightClickSetting = (checked: boolean) => {
+    updateSettings({ rightClickToLocate: checked })
+  }
+
+  // '' is the "Default" option: no pick of their own, follow the admin's default.
+  const handleLanguageChange = (value: string) => {
+    updateSettings({ language: isLanguage(value) ? value : null })
   }
 
   // Automatic reconnection if an API key has already been validated on
@@ -284,7 +298,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
-    setAuthError('')
+    setAuthFailed(false)
     setAuthLoading(true)
     const ok = await authenticate(apiKeyInput)
     setAuthLoading(false)
@@ -292,7 +306,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       setIsAuthenticated(true)
       setApiKeyInput('')
     } else {
-      setAuthError(messages.loginError)
+      setAuthFailed(true)
     }
   }
 
@@ -713,6 +727,18 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                 </button>
                 {isSettingsOpen && (
                   <div className="jakartowns-viewer-settings-popover">
+                    <label className="jakartowns-viewer-settings-row jakartowns-viewer-settings-row--select">
+                      {messages.languageLabel}
+                      <select
+                        value={isLanguage(settings.language) ? settings.language : ''}
+                        onChange={(e) => handleLanguageChange(e.target.value)}
+                      >
+                        <option value="">{messages.languageUseDefault}</option>
+                        {/* Each language is named in itself, whichever language the panel is in. */}
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                      </select>
+                    </label>
                     <label className="jakartowns-viewer-settings-row">
                       <input
                         type="checkbox"
@@ -756,7 +782,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             {!isAuthenticated && (
               <div className="jakartowns-viewer-login">
                 <h3 className="jakartowns-viewer-login-title">{messages.loginTitle}</h3>
-                {authError && <p className="jakartowns-viewer-login-error">{authError}</p>}
+                {authFailed && <p className="jakartowns-viewer-login-error">{messages.loginError}</p>}
                 <form className="jakartowns-viewer-login-form" onSubmit={handleLogin}>
                   <label htmlFor="jakarto-apikey" className="jakartowns-viewer-login-label">
                     {messages.loginLabel}
@@ -817,7 +843,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                           }
                           onClick={() => handleSelectImage(image.imageId)}
                         >
-                          {formatJakartoDate(image.date, locale) ?? messages.multipassUnknownDate}
+                          {formatJakartoDate(image.date, language) ?? messages.multipassUnknownDate}
                         </button>
                       ))}
                     </div>

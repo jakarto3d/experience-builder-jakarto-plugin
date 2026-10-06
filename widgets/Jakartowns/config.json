@@ -1,5 +1,6 @@
 {
   "fallbackLatitude": 45.7476,
   "fallbackLongitude": -73.6005,
-  "compassEnabled": true
+  "compassEnabled": true,
+  "language": "auto"
 }

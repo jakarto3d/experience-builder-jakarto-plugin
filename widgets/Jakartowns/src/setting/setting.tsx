@@ -1,15 +1,19 @@
 import { React } from 'jimu-core'
 import { type AllWidgetSettingProps } from 'jimu-for-builder'
-import { Switch } from 'jimu-ui'
+import { Select, Switch } from 'jimu-ui'
 import { MapWidgetSelector, SettingSection, SettingRow } from 'jimu-ui/advanced/setting-components'
 import { type IMConfig } from '../config'
 import UpdateNotice from './components/UpdateNotice'
-import { pickMessages } from '../lib/locale'
+import { resolveLanguage, toLanguageChoice } from '../lib/locale'
 import frMessages from './translations/default'
 import enMessages from './translations/en'
 
+const MESSAGES = { fr: frMessages, en: enMessages }
+
 const Setting = (props: AllWidgetSettingProps<IMConfig>) => {
-  const messages = pickMessages(props.locale, { fr: frMessages, en: enMessages })
+  // This panel follows the builder's own language: the "Default language"
+  // option below is for the published experience, not for this panel.
+  const messages = MESSAGES[resolveLanguage(props.locale)]
 
   // onSelect returns a plain array (string[]), not an ImmutableArray:
   // same shape as WidgetJson.useMapWidgetIds on the framework side.
@@ -24,6 +28,13 @@ const Setting = (props: AllWidgetSettingProps<IMConfig>) => {
     props.onSettingChange({
       id: props.id,
       config: props.config.set('compassEnabled', event.target.checked)
+    })
+  }
+
+  const onLanguageChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    props.onSettingChange({
+      id: props.id,
+      config: props.config.set('language', toLanguageChoice(event.target.value))
     })
   }
 
@@ -43,6 +54,23 @@ const Setting = (props: AllWidgetSettingProps<IMConfig>) => {
             checked={props.config.compassEnabled}
             onChange={onCompassEnabledChange}
           />
+        </SettingRow>
+        {/*
+          `config.language` is absent on widgets saved before this option
+          existed — toLanguageChoice reads that as 'auto'.
+        */}
+        <SettingRow label={messages.defaultLanguageLabel} flow="wrap">
+          <Select
+            size="sm"
+            value={toLanguageChoice(props.config.language)}
+            onChange={onLanguageChange}
+            aria-label={messages.defaultLanguageLabel}
+          >
+            <option value="auto">{messages.languageAutoOption}</option>
+            {/* Each language is named in itself, whichever language this panel is in. */}
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+          </Select>
         </SettingRow>
       </SettingSection>
       {/*
