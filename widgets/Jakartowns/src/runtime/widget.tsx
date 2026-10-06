@@ -33,8 +33,12 @@ import {
 } from './lib/panelGeometry'
 import { buildTimelineEntries } from './lib/timeline'
 import { formatJakartoDate } from './lib/format'
-import defaultMessages from './translations/default'
+import { isLanguage, resolveLanguage } from '../lib/locale'
+import frMessages from './translations/default'
+import enMessages from './translations/en'
 import './widget.css'
+
+const MESSAGES = { fr: frMessages, en: enMessages }
 
 // panelSize.height is the panel's TOTAL height (title bar included), not
 // just the panorama's: the title bar always keeps its natural size
@@ -116,7 +120,7 @@ const IconGear = () => (
  * Navigating inside the panorama recenters the map the other way around.
  */
 const Widget = (props: AllWidgetProps<IMConfig>) => {
-  const { useMapWidgetIds, config } = props
+  const { useMapWidgetIds, config, locale } = props
   const hasLinkedMap = !!(useMapWidgetIds && useMapWidgetIds.length > 0)
 
   const widgetRootRef = React.useRef<HTMLDivElement>(null)
@@ -165,7 +169,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const [isAuthenticated, setIsAuthenticated] = React.useState(false)
   const [apiKeyInput, setApiKeyInput] = React.useState('')
-  const [authError, setAuthError] = React.useState('')
+  const [authFailed, setAuthFailed] = React.useState(false)
   const [authLoading, setAuthLoading] = React.useState(false)
 
   const viewerContainerRef = React.useRef<HTMLDivElement>(null)
@@ -173,6 +177,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const timelineListRef = React.useRef<HTMLDivElement>(null)
 
   const [settings, setSettings] = React.useState<JakartoWidgetSettings>(() => getStoredSettings())
+  // The end-user's own pick wins over the admin's default, which wins over
+  // Experience Builder's locale (see lib/locale.ts).
+  const language = resolveLanguage(locale, { adminDefault: config.language, userChoice: settings.language })
+  const messages = MESSAGES[language]
   const [isSettingsOpen, setIsSettingsOpen] = React.useState(false)
   // Covers the gear button AND the popover (not just the popover): otherwise
   // clicking the button itself while the popover is open counts as an
@@ -262,10 +270,19 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     return () => document.removeEventListener('pointerdown', onPointerDownOutside)
   }, [isSettingsOpen])
 
-  const handleToggleRightClickSetting = (checked: boolean) => {
-    const next = { ...settings, rightClickToLocate: checked }
+  const updateSettings = (patch: Partial<JakartoWidgetSettings>) => {
+    const next = { ...settings, ...patch }
     setSettings(next)
     storeSettings(next)
+  }
+
+  const handleToggleRightClickSetting = (checked: boolean) => {
+    updateSettings({ rightClickToLocate: checked })
+  }
+
+  // '' is the "Default" option: no pick of their own, follow the admin's default.
+  const handleLanguageChange = (value: string) => {
+    updateSettings({ language: isLanguage(value) ? value : null })
   }
 
   // Automatic reconnection if an API key has already been validated on
@@ -281,7 +298,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
-    setAuthError('')
+    setAuthFailed(false)
     setAuthLoading(true)
     const ok = await authenticate(apiKeyInput)
     setAuthLoading(false)
@@ -289,7 +306,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       setIsAuthenticated(true)
       setApiKeyInput('')
     } else {
-      setAuthError(defaultMessages.loginError)
+      setAuthFailed(true)
     }
   }
 
@@ -640,13 +657,13 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
       {!hasLinkedMap && (
         <div className="jakartowns-viewer-placeholder">
-          {defaultMessages.noMapWidgetLinked}
+          {messages.noMapWidgetLinked}
         </div>
       )}
 
       {hasLinkedMap && !jimuMapView && (
         <div className="jakartowns-viewer-placeholder">
-          {defaultMessages.waitingForMap}
+          {messages.waitingForMap}
         </div>
       )}
 
@@ -680,16 +697,16 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                 type="button"
                 className="jakartowns-viewer-picking-btn"
                 aria-pressed={isPickingEnabled}
-                title={defaultMessages.pickingModeHint}
+                title={messages.pickingModeHint}
                 onClick={() => setIsPickingEnabled((enabled) => !enabled)}
               >
                 <IconTarget />
-                <span>{defaultMessages.pickingModeLabel}</span>
+                <span>{messages.pickingModeLabel}</span>
               </button>
               <button
                 type="button"
                 className="jakartowns-viewer-icon-btn"
-                title={defaultMessages.openInJakartownsLink}
+                title={messages.openInJakartownsLink}
                 onClick={handleOpenInJakartowns}
                 disabled={!currentImageId}
               >
@@ -703,20 +720,32 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                   type="button"
                   className="jakartowns-viewer-icon-btn"
                   aria-pressed={isSettingsOpen}
-                  title={defaultMessages.settingsLabel}
+                  title={messages.settingsLabel}
                   onClick={() => setIsSettingsOpen((open) => !open)}
                 >
                   <IconGear />
                 </button>
                 {isSettingsOpen && (
                   <div className="jakartowns-viewer-settings-popover">
+                    <label className="jakartowns-viewer-settings-row jakartowns-viewer-settings-row--select">
+                      {messages.languageLabel}
+                      <select
+                        value={isLanguage(settings.language) ? settings.language : ''}
+                        onChange={(e) => handleLanguageChange(e.target.value)}
+                      >
+                        <option value="">{messages.languageUseDefault}</option>
+                        {/* Each language is named in itself, whichever language the panel is in. */}
+                        <option value="fr">Français</option>
+                        <option value="en">English</option>
+                      </select>
+                    </label>
                     <label className="jakartowns-viewer-settings-row">
                       <input
                         type="checkbox"
                         checked={settings.rightClickToLocate}
                         onChange={(e) => handleToggleRightClickSetting(e.target.checked)}
                       />
-                      {defaultMessages.settingsRightClickLabel}
+                      {messages.settingsRightClickLabel}
                     </label>
                   </div>
                 )}
@@ -725,7 +754,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                 <button
                   type="button"
                   className="jakartowns-viewer-icon-btn"
-                  title={defaultMessages.logoutButton}
+                  title={messages.logoutButton}
                   onClick={handleLogout}
                 >
                   <IconLogout />
@@ -734,7 +763,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
               <button
                 type="button"
                 className="jakartowns-viewer-icon-btn"
-                title={isPanelFolded ? defaultMessages.unfoldPanel : defaultMessages.foldPanel}
+                title={isPanelFolded ? messages.unfoldPanel : messages.foldPanel}
                 onClick={() => setIsPanelFolded((folded) => !folded)}
               >
                 <IconChevron folded={isPanelFolded} />
@@ -752,11 +781,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           <div className={'jakartowns-viewer-panel-body' + (isPanelFolded ? ' jakartowns-viewer-panel-body--hidden' : '')}>
             {!isAuthenticated && (
               <div className="jakartowns-viewer-login">
-                <h3 className="jakartowns-viewer-login-title">{defaultMessages.loginTitle}</h3>
-                {authError && <p className="jakartowns-viewer-login-error">{authError}</p>}
+                <h3 className="jakartowns-viewer-login-title">{messages.loginTitle}</h3>
+                {authFailed && <p className="jakartowns-viewer-login-error">{messages.loginError}</p>}
                 <form className="jakartowns-viewer-login-form" onSubmit={handleLogin}>
                   <label htmlFor="jakarto-apikey" className="jakartowns-viewer-login-label">
-                    {defaultMessages.loginLabel}
+                    {messages.loginLabel}
                   </label>
                   <input
                     id="jakarto-apikey"
@@ -773,10 +802,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                     rel="noopener noreferrer"
                     className="jakartowns-viewer-login-link"
                   >
-                    {defaultMessages.loginLink}
+                    {messages.loginLink}
                   </a>
                   <button type="submit" className="jakartowns-viewer-login-btn" disabled={authLoading}>
-                    {authLoading ? defaultMessages.loginButtonLoading : defaultMessages.loginButton}
+                    {authLoading ? messages.loginButtonLoading : messages.loginButton}
                   </button>
                 </form>
               </div>
@@ -788,7 +817,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
                 {!currentImageId && (
                   <div className="jakartowns-viewer-panorama-waiting">
-                    {defaultMessages.panoramaWaitingForPick}
+                    {messages.panoramaWaitingForPick}
                   </div>
                 )}
 
@@ -797,7 +826,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                     <button
                       type="button"
                       className="jakartowns-viewer-timeline-arrow"
-                      aria-label={defaultMessages.timelineScrollPrevious}
+                      aria-label={messages.timelineScrollPrevious}
                       onClick={() => scrollTimeline(-1)}
                       disabled={!canScrollTimeline}
                     >
@@ -814,14 +843,14 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                           }
                           onClick={() => handleSelectImage(image.imageId)}
                         >
-                          {formatJakartoDate(image.date) ?? defaultMessages.multipassUnknownDate}
+                          {formatJakartoDate(image.date, language) ?? messages.multipassUnknownDate}
                         </button>
                       ))}
                     </div>
                     <button
                       type="button"
                       className="jakartowns-viewer-timeline-arrow"
-                      aria-label={defaultMessages.timelineScrollNext}
+                      aria-label={messages.timelineScrollNext}
                       onClick={() => scrollTimeline(1)}
                       disabled={!canScrollTimeline}
                     >

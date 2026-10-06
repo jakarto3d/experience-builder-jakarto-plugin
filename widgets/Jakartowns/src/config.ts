@@ -1,4 +1,5 @@
 import { type ImmutableObject } from 'jimu-core'
+import { type LanguageChoice } from './lib/locale'
 
 /**
  * Options exposed in the widget's settings panel (see src/setting/setting.tsx).
@@ -15,6 +16,14 @@ export interface Config {
   fallbackLongitude: number
   /** Whether Jakartowns shows its own compass for orienting inside the panorama. */
   compassEnabled: boolean
+  /**
+   * The language the widget opens in: a fixed one, or `'auto'` to follow the
+   * language Experience Builder runs in. An end-user can still override it
+   * for themselves from the panel's settings popover. Absent on widgets saved
+   * before this option existed — read it through `resolveLanguage`, which
+   * treats that as `'auto'`.
+   */
+  language: LanguageChoice
 }
 
 export type IMConfig = ImmutableObject<Config>

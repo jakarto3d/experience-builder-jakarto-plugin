@@ -21,17 +21,18 @@ client/
             ├── icon.svg
             └── src/
                 ├── config.ts
+                ├── lib/locale.ts                 (language selection, shared)
                 ├── runtime/
                 │   ├── widget.tsx
                 │   ├── widget.css
                 │   ├── services/jakarto.ts
                 │   ├── lib/observerIcon.ts
-                │   └── translations/default.ts
+                │   └── translations/{default,en}.ts
                 └── setting/
                     ├── setting.tsx
                     ├── components/UpdateNotice.tsx
                     ├── lib/updateCheck.ts
-                    └── translations/default.ts
+                    └── translations/{default,en}.ts
 ```
 
 This repo is not an independently buildable project — see
@@ -90,7 +91,7 @@ for why this pattern was chosen over Message Actions or an iframe.
 
 - **`setting.tsx`** — the settings panel: the `MapWidgetSelector` binding
   (section 3), the panorama options backed by `config.json`, and the
-  "Version du widget" section.
+  "Widget version" section ("Version du widget" in French).
 - **`components/UpdateNotice.tsx` + `lib/updateCheck.ts`** — compares
   `props.manifest.version` (injected by the framework) against the latest
   published GitHub release, so whoever installed the widget on a portal
@@ -98,7 +99,22 @@ for why this pattern was chosen over Message Actions or an iframe.
   `localStorage` (`jakartowns-viewer:latestRelease`), and silent on failure
   — see [ADR-0017](../adr/0017-in-builder-update-notification.md).
 
-## 6. Validation limits
+## 6. Language
+
+The UI is available in French and English. Both sets of strings are bundled
+(`translations/default.ts` = French, `translations/en.ts` = English, in both
+`runtime/` and `setting/`), and `lib/locale.ts` picks one, in this order: the
+end-user's own pick (gear popover, stored in `localStorage` with the other
+per-user settings), the admin's default (`config.language` — `auto`, `fr` or
+`en` — set in the settings panel), then `props.locale` (English for any `en*`
+locale, French for everything else). Dates in the multipass timeline follow
+the same choice; the settings panel itself follows `props.locale` only.
+`translatedLocales` in
+`manifest.json` deliberately stays `["fr"]` — see
+[ADR-0018](../adr/0018-built-in-english-translation.md). A new UI string goes
+in `default.ts` first, then `en.ts` (the compiler flags it if it's missing).
+
+## 7. Validation limits
 
 Without a local Developer Edition, `jimu-core` / `jimu-ui` / `jimu-arcgis`
 cannot be installed as regular npm dependencies. Code here is written to be

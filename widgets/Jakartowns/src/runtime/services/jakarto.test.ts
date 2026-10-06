@@ -80,17 +80,22 @@ describe('buildJakartownsUrl', () => {
 
 describe('getStoredSettings / storeSettings', () => {
   it('returns the default settings when nothing is stored', () => {
-    expect(getStoredSettings()).toEqual({ rightClickToLocate: false })
+    expect(getStoredSettings()).toEqual({ rightClickToLocate: false, language: null })
   })
 
   it('round-trips a stored setting', () => {
-    storeSettings({ rightClickToLocate: true })
-    expect(getStoredSettings()).toEqual({ rightClickToLocate: true })
+    storeSettings({ rightClickToLocate: true, language: 'en' })
+    expect(getStoredSettings()).toEqual({ rightClickToLocate: true, language: 'en' })
+  })
+
+  it('fills in no language choice for settings stored before the option existed', () => {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify({ rightClickToLocate: true }))
+    expect(getStoredSettings()).toEqual({ rightClickToLocate: true, language: null })
   })
 
   it('falls back to defaults when the stored JSON is corrupt', () => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, '{not valid json')
-    expect(getStoredSettings()).toEqual({ rightClickToLocate: false })
+    expect(getStoredSettings()).toEqual({ rightClickToLocate: false, language: null })
   })
 })
 

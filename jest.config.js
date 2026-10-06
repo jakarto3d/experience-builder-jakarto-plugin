@@ -6,6 +6,7 @@ module.exports = {
   setupFiles: ['<rootDir>/jest.setup.ts'],
   testMatch: ['**/*.test.ts'],
   collectCoverageFrom: [
+    'widgets/Jakartowns/src/lib/**/*.ts',
     'widgets/Jakartowns/src/runtime/lib/**/*.ts',
     'widgets/Jakartowns/src/runtime/services/**/*.ts',
     'widgets/Jakartowns/src/setting/lib/**/*.ts'

@@ -2,10 +2,10 @@ import { React } from 'jimu-core'
 import { Alert } from 'jimu-ui'
 import { SettingRow, SettingSection } from 'jimu-ui/advanced/setting-components'
 import { getLatestRelease, resolveUpdateStatus, type UpdateStatus } from '../lib/updateCheck'
-import defaultMessages from '../translations/default'
+import type frMessages from '../translations/default'
 
 /**
- * "Version du widget" section of the settings panel: shows which version is
+ * "Widget version" section of the settings panel: shows which version is
  * installed and, when a newer release exists, how to get it.
  *
  * Deliberately confined to the settings panel (builder-side): the person who
@@ -17,6 +17,8 @@ import defaultMessages from '../translations/default'
 interface UpdateNoticeProps {
   /** `manifest.version` of the installed widget — absent if the framework injected no manifest. */
   installedVersion?: string
+  /** The settings panel's strings in the builder's language (see lib/locale.ts). */
+  messages: typeof frMessages
 }
 
 /** The translations only ever interpolate a version number — no need for `intl` formatting here. */
@@ -25,7 +27,7 @@ function withVersion(template: string, version: string): string {
 }
 
 const UpdateNotice = (props: UpdateNoticeProps) => {
-  const { installedVersion } = props
+  const { installedVersion, messages } = props
   const [status, setStatus] = React.useState<UpdateStatus>({ kind: 'checking' })
 
   React.useEffect(() => {
@@ -44,8 +46,8 @@ const UpdateNotice = (props: UpdateNoticeProps) => {
   }, [installedVersion])
 
   return (
-    <SettingSection title={defaultMessages.versionSectionTitle}>
-      <SettingRow label={defaultMessages.installedVersionLabel}>
+    <SettingSection title={messages.versionSectionTitle}>
+      <SettingRow label={messages.installedVersionLabel}>
         <span>{installedVersion ?? '—'}</span>
       </SettingRow>
       {status.kind === 'updateAvailable'
@@ -57,22 +59,22 @@ const UpdateNotice = (props: UpdateNoticeProps) => {
             open
             withIcon
             className="w-100"
-            text={withVersion(defaultMessages.updateAvailableTitle, status.release.version)}
+            text={withVersion(messages.updateAvailableTitle, status.release.version)}
           />
           <p className="mt-2 mb-1 text-break">
-            {withVersion(defaultMessages.updateAvailableHint, status.release.version)}
+            {withVersion(messages.updateAvailableHint, status.release.version)}
           </p>
           <a href={status.release.url} target="_blank" rel="noopener noreferrer">
-            {withVersion(defaultMessages.updateAvailableLinkLabel, status.release.version)}
+            {withVersion(messages.updateAvailableLinkLabel, status.release.version)}
           </a>
         </SettingRow>
           )
         : (
         <SettingRow flow="wrap">
           <span className="text-break">
-            {status.kind === 'checking' && defaultMessages.versionCheckingLabel}
-            {status.kind === 'upToDate' && defaultMessages.versionUpToDateLabel}
-            {status.kind === 'unknown' && defaultMessages.versionUnknownLabel}
+            {status.kind === 'checking' && messages.versionCheckingLabel}
+            {status.kind === 'upToDate' && messages.versionUpToDateLabel}
+            {status.kind === 'unknown' && messages.versionUnknownLabel}
           </span>
         </SettingRow>
           )}

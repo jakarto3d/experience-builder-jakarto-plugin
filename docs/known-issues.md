@@ -34,6 +34,17 @@ into an ADR if it changes a decision.
   `SettingRow flow="wrap"`) hasn't been looked at in a running builder yet.
   Its "update available" state can only be seen once a release newer than
   the installed version exists — until then it renders "À jour".
+- **English UI and language choice**: end-user pick, then the admin's
+  "Default language", then `props.locale`
+  ([ADR-0018](adr/0018-built-in-english-translation.md)). The pure selection,
+  the two string sets, the stored setting and the portal build are checked by
+  tests and by `just build-release`, and the popover's layout was rendered
+  with the widget's CSS, but none of it has been looked at in a running
+  builder — in particular that `props.locale` carries the portal user's
+  language there (e.g. `en-ca`) rather than something else, and how the
+  jimu-ui `Select` for "Default language" lays out in the settings panel.
+  Not covered: the embedded Jakartowns viewer's own UI, and the French
+  tutorial on docs.jakarto.com.
 - **Vector-tile availability layer**: removed due to a CORS/cookie
   limitation (see [ADR-0006](adr/0006-remove-jakman-availability-layer.md)).
   Would need Jakarto to expose that endpoint with cross-origin support (or a

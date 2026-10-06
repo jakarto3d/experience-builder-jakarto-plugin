@@ -22,6 +22,8 @@ declare module 'jimu-core' {
     id: string
     useMapWidgetIds?: string[]
     config: T
+    /** The app's locale ("en", "en-ca", "fr-ca", …). */
+    locale: string
     [key: string]: any
   }
 
@@ -43,6 +45,8 @@ declare module 'jimu-for-builder' {
     id: string
     useMapWidgetIds?: string[]
     config: T
+    /** The builder's locale ("en", "en-ca", "fr-ca", …). */
+    locale: string
     onSettingChange: (settingChange: { id: string, useMapWidgetIds?: string[], config?: T, [key: string]: any }) => void
     [key: string]: any
   }
@@ -52,6 +56,7 @@ declare module 'jimu-ui' {
   import * as ReactNS from 'react'
 
   export const Switch: ReactNS.ComponentType<any>
+  export const Select: ReactNS.ComponentType<any>
   export const Alert: ReactNS.ComponentType<any>
 }
 

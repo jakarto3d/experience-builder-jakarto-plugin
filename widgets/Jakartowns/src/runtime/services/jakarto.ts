@@ -25,6 +25,8 @@
  * the key on every reload.
  */
 
+import { type Language } from '../../lib/locale'
+
 const JAKARTO_LOGIN_URL = 'https://account.jakarto.com/users/trade-api-key'
 const JAKARTO_LOGOUT_URL = 'https://account.jakarto.com/users/logout'
 const JAKARTOWNS_SCRIPT_URL = 'https://maps.jakarto.com/api/v1.js'
@@ -158,10 +160,16 @@ export interface JakartoWidgetSettings {
    * host application — disabled until the user explicitly enables it.
    */
   rightClickToLocate: boolean
+  /**
+   * The user's own language pick, overriding the admin's default from the
+   * settings panel. `null` = no pick: follow the admin's default.
+   */
+  language: Language | null
 }
 
 const DEFAULT_SETTINGS: JakartoWidgetSettings = {
-  rightClickToLocate: false
+  rightClickToLocate: false,
+  language: null
 }
 
 /** Loads widget settings from localStorage (falls back to defaults). */

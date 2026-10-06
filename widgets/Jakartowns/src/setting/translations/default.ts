@@ -2,6 +2,8 @@ export default {
   linkedMapSectionTitle: 'Carte liée',
   panoramaSectionTitle: 'Panorama',
   compassEnabledLabel: 'Afficher la boussole',
+  defaultLanguageLabel: 'Langue par défaut',
+  languageAutoOption: 'Automatique (selon la langue d’Experience Builder)',
   versionSectionTitle: 'Version du widget',
   installedVersionLabel: 'Version installée',
   versionCheckingLabel: 'Vérification…',
