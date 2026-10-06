@@ -33,7 +33,9 @@ import {
 } from './lib/panelGeometry'
 import { buildTimelineEntries } from './lib/timeline'
 import { formatJakartoDate } from './lib/format'
-import defaultMessages from './translations/default'
+import { pickMessages } from '../lib/locale'
+import frMessages from './translations/default'
+import enMessages from './translations/en'
 import './widget.css'
 
 // panelSize.height is the panel's TOTAL height (title bar included), not
@@ -116,7 +118,8 @@ const IconGear = () => (
  * Navigating inside the panorama recenters the map the other way around.
  */
 const Widget = (props: AllWidgetProps<IMConfig>) => {
-  const { useMapWidgetIds, config } = props
+  const { useMapWidgetIds, config, locale } = props
+  const messages = pickMessages(locale, { fr: frMessages, en: enMessages })
   const hasLinkedMap = !!(useMapWidgetIds && useMapWidgetIds.length > 0)
 
   const widgetRootRef = React.useRef<HTMLDivElement>(null)
@@ -289,7 +292,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
       setIsAuthenticated(true)
       setApiKeyInput('')
     } else {
-      setAuthError(defaultMessages.loginError)
+      setAuthError(messages.loginError)
     }
   }
 
@@ -640,13 +643,13 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
       {!hasLinkedMap && (
         <div className="jakartowns-viewer-placeholder">
-          {defaultMessages.noMapWidgetLinked}
+          {messages.noMapWidgetLinked}
         </div>
       )}
 
       {hasLinkedMap && !jimuMapView && (
         <div className="jakartowns-viewer-placeholder">
-          {defaultMessages.waitingForMap}
+          {messages.waitingForMap}
         </div>
       )}
 
@@ -680,16 +683,16 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                 type="button"
                 className="jakartowns-viewer-picking-btn"
                 aria-pressed={isPickingEnabled}
-                title={defaultMessages.pickingModeHint}
+                title={messages.pickingModeHint}
                 onClick={() => setIsPickingEnabled((enabled) => !enabled)}
               >
                 <IconTarget />
-                <span>{defaultMessages.pickingModeLabel}</span>
+                <span>{messages.pickingModeLabel}</span>
               </button>
               <button
                 type="button"
                 className="jakartowns-viewer-icon-btn"
-                title={defaultMessages.openInJakartownsLink}
+                title={messages.openInJakartownsLink}
                 onClick={handleOpenInJakartowns}
                 disabled={!currentImageId}
               >
@@ -703,7 +706,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                   type="button"
                   className="jakartowns-viewer-icon-btn"
                   aria-pressed={isSettingsOpen}
-                  title={defaultMessages.settingsLabel}
+                  title={messages.settingsLabel}
                   onClick={() => setIsSettingsOpen((open) => !open)}
                 >
                   <IconGear />
@@ -716,7 +719,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                         checked={settings.rightClickToLocate}
                         onChange={(e) => handleToggleRightClickSetting(e.target.checked)}
                       />
-                      {defaultMessages.settingsRightClickLabel}
+                      {messages.settingsRightClickLabel}
                     </label>
                   </div>
                 )}
@@ -725,7 +728,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                 <button
                   type="button"
                   className="jakartowns-viewer-icon-btn"
-                  title={defaultMessages.logoutButton}
+                  title={messages.logoutButton}
                   onClick={handleLogout}
                 >
                   <IconLogout />
@@ -734,7 +737,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
               <button
                 type="button"
                 className="jakartowns-viewer-icon-btn"
-                title={isPanelFolded ? defaultMessages.unfoldPanel : defaultMessages.foldPanel}
+                title={isPanelFolded ? messages.unfoldPanel : messages.foldPanel}
                 onClick={() => setIsPanelFolded((folded) => !folded)}
               >
                 <IconChevron folded={isPanelFolded} />
@@ -752,11 +755,11 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
           <div className={'jakartowns-viewer-panel-body' + (isPanelFolded ? ' jakartowns-viewer-panel-body--hidden' : '')}>
             {!isAuthenticated && (
               <div className="jakartowns-viewer-login">
-                <h3 className="jakartowns-viewer-login-title">{defaultMessages.loginTitle}</h3>
+                <h3 className="jakartowns-viewer-login-title">{messages.loginTitle}</h3>
                 {authError && <p className="jakartowns-viewer-login-error">{authError}</p>}
                 <form className="jakartowns-viewer-login-form" onSubmit={handleLogin}>
                   <label htmlFor="jakarto-apikey" className="jakartowns-viewer-login-label">
-                    {defaultMessages.loginLabel}
+                    {messages.loginLabel}
                   </label>
                   <input
                     id="jakarto-apikey"
@@ -773,10 +776,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                     rel="noopener noreferrer"
                     className="jakartowns-viewer-login-link"
                   >
-                    {defaultMessages.loginLink}
+                    {messages.loginLink}
                   </a>
                   <button type="submit" className="jakartowns-viewer-login-btn" disabled={authLoading}>
-                    {authLoading ? defaultMessages.loginButtonLoading : defaultMessages.loginButton}
+                    {authLoading ? messages.loginButtonLoading : messages.loginButton}
                   </button>
                 </form>
               </div>
@@ -788,7 +791,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
 
                 {!currentImageId && (
                   <div className="jakartowns-viewer-panorama-waiting">
-                    {defaultMessages.panoramaWaitingForPick}
+                    {messages.panoramaWaitingForPick}
                   </div>
                 )}
 
@@ -797,7 +800,7 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                     <button
                       type="button"
                       className="jakartowns-viewer-timeline-arrow"
-                      aria-label={defaultMessages.timelineScrollPrevious}
+                      aria-label={messages.timelineScrollPrevious}
                       onClick={() => scrollTimeline(-1)}
                       disabled={!canScrollTimeline}
                     >
@@ -814,14 +817,14 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                           }
                           onClick={() => handleSelectImage(image.imageId)}
                         >
-                          {formatJakartoDate(image.date) ?? defaultMessages.multipassUnknownDate}
+                          {formatJakartoDate(image.date, locale) ?? messages.multipassUnknownDate}
                         </button>
                       ))}
                     </div>
                     <button
                       type="button"
                       className="jakartowns-viewer-timeline-arrow"
-                      aria-label={defaultMessages.timelineScrollNext}
+                      aria-label={messages.timelineScrollNext}
                       onClick={() => scrollTimeline(1)}
                       disabled={!canScrollTimeline}
                     >
