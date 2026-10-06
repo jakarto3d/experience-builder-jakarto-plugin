@@ -76,6 +76,26 @@ with no outbound access to `api.github.com` simply shows "mise à jour non
 vérifiable" instead of an error. See
 [ADR-0017](../../docs/adr/0017-in-builder-update-notification.md).
 
+## Language
+
+The widget — the panel, the login form, the date timeline and the settings
+panel — is available in **English and French**, with nothing to install or
+configure: by default it follows the language Experience Builder runs in (the
+portal user's language). Any English locale (`en`, `en-CA`, …) shows English;
+every other locale shows French. Dates follow the same language.
+
+- **Admin:** the settings panel has a **Default language** option —
+  *Automatic* (follow Experience Builder, the default), *Français* or
+  *English* — saved with the experience.
+- **End-user:** the gear button in the panel's title bar has a **Language**
+  selector — *Default* (whatever the admin set up), *Français* or *English*.
+  The choice is remembered in that browser.
+
+The French labels
+quoted elsewhere in this README ("Version du widget", "mise à jour non
+vérifiable") read "Widget version" and "Unable to check for updates" in
+English. See [ADR-0018](../../docs/adr/0018-built-in-english-translation.md).
+
 ## Usage
 
 - A visitor must provide their own Jakarto API key (obtainable from

@@ -43,3 +43,4 @@ messages follow a `feat(widget)`/`fix(widget)`/`docs` convention.
 | [`adr/0015`](adr/0015-automate-portal-ready-release-build.md) | Automating a portal-ready build in the release workflow |
 | [`adr/0016`](adr/0016-rehearsable-release-build.md) | Making the release build rehearsable locally before tagging |
 | [`adr/0017`](adr/0017-in-builder-update-notification.md) | Signalling a new release in the settings panel |
+| [`adr/0018`](adr/0018-built-in-english-translation.md) | Built-in English translation, chosen from the builder's locale |
