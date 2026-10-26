@@ -58,6 +58,7 @@ declare module 'jimu-ui' {
   export const Switch: ReactNS.ComponentType<any>
   export const Select: ReactNS.ComponentType<any>
   export const Alert: ReactNS.ComponentType<any>
+  export const TextInput: ReactNS.ComponentType<any>
 }
 
 declare module 'jimu-ui/advanced/setting-components' {

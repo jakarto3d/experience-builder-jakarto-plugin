@@ -118,6 +118,20 @@ describe('authenticate', () => {
     expect(localStorage.getItem(API_KEY_STORAGE_KEY)).toBe('good-key')
   })
 
+  it('signs in with the key but never writes it to localStorage when asked not to remember it', async () => {
+    mockFetchOnce({ ok: true })
+    await expect(authenticate('shared-key', { remember: false })).resolves.toBe(true)
+    expect(JSON.parse((global.fetch as jest.Mock).mock.calls[0][1].body)).toEqual({ apiKey: 'shared-key' })
+    expect(localStorage.getItem(API_KEY_STORAGE_KEY)).toBeNull()
+    expect(localStorage.length).toBe(0)
+  })
+
+  it('still caches the key by default, as before the shared-key mode existed', async () => {
+    mockFetchOnce({ ok: true })
+    await authenticate('personal-key', {})
+    expect(localStorage.getItem(API_KEY_STORAGE_KEY)).toBe('personal-key')
+  })
+
   it('returns false and does not cache the key on a failed response', async () => {
     mockFetchOnce({ ok: false })
     await expect(authenticate('bad-key')).resolves.toBe(false)

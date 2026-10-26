@@ -78,6 +78,12 @@ repositioned/reoriented `Graphic` — see
   [ADR-0003](../adr/0003-per-user-api-key-authentication.md) and
   [ADR-0004](../adr/0004-cache-api-key-in-localstorage.md).
 - Logout button (title bar) tears down the viewer and clears the cached key.
+- With a **shared key** (author's choice in the settings panel, see
+  [ADR-0019](../adr/0019-shared-api-key-chosen-by-the-experience-author.md)):
+  no login form and no logout button. The panel shows "Connexion à
+  Jakarto…" while signing in, then the panorama; if the key is missing or
+  fails, it says the panorama can't be opened and to contact whoever
+  administers the experience. The key is never cached.
 
 ## "Open in Jakartowns" button
 

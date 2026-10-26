@@ -33,6 +33,7 @@ import {
 } from './lib/panelGeometry'
 import { buildTimelineEntries } from './lib/timeline'
 import { formatJakartoDate } from './lib/format'
+import { resolveAuthSetup } from '../lib/authMode'
 import { isLanguage, resolveLanguage } from '../lib/locale'
 import frMessages from './translations/default'
 import enMessages from './translations/en'
@@ -123,6 +124,13 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const { useMapWidgetIds, config, locale } = props
   const hasLinkedMap = !!(useMapWidgetIds && useMapWidgetIds.length > 0)
 
+  // How people sign in, as the experience author configured it: with their
+  // own key (the original behavior) or all through one shared key. The key is
+  // '' unless the author chose the shared mode and entered one.
+  const authSetup = resolveAuthSetup(config)
+  const authMode = authSetup.mode
+  const sharedApiKey = authSetup.mode === 'shared' ? authSetup.apiKey : ''
+
   const widgetRootRef = React.useRef<HTMLDivElement>(null)
   const panelRef = React.useRef<HTMLDivElement>(null)
   const dragStateRef = React.useRef<DragState | null>(null)
@@ -171,6 +179,10 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
   const [apiKeyInput, setApiKeyInput] = React.useState('')
   const [authFailed, setAuthFailed] = React.useState(false)
   const [authLoading, setAuthLoading] = React.useState(false)
+  // Shared-key mode only: whether Jakarto turned the author's key down (or
+  // couldn't be reached with it). There is no form to retry from, so visitors
+  // are told to contact whoever administers the experience instead.
+  const [sharedAuthFailed, setSharedAuthFailed] = React.useState(false)
 
   const viewerContainerRef = React.useRef<HTMLDivElement>(null)
   const viewerHandleRef = React.useRef<JakartoViewerHandle | null>(null)
@@ -285,16 +297,43 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
     updateSettings({ language: isLanguage(value) ? value : null })
   }
 
-  // Automatic reconnection if an API key has already been validated on
-  // this browser (see services/jakarto.ts — works around the CORS
-  // restriction on the session-check endpoint).
+  // Signs in on load. Re-runs only if the author changes the mode or the
+  // shared key (live in the builder): the previous session and what it was
+  // showing are dropped first, so a visitor can't keep the panorama open
+  // under a key that is no longer the experience's.
   React.useEffect(() => {
-    const storedApiKey = getStoredApiKey()
-    if (!storedApiKey) return
-    authenticate(storedApiKey).then((ok) => {
-      if (ok) setIsAuthenticated(true)
-    })
-  }, [])
+    let cancelled = false
+    setIsAuthenticated(false)
+    setSharedAuthFailed(false)
+    setCurrentDate(null)
+    setCurrentImageId(null)
+    setAvailableImages([])
+
+    if (authMode === 'shared') {
+      // Whatever personal key this browser has cached is ignored — nobody
+      // gets to swap in their own — and the shared key is never cached
+      // itself (remember: false): it already lives in the configuration.
+      if (sharedApiKey) {
+        authenticate(sharedApiKey, { remember: false }).then((ok) => {
+          if (cancelled) return
+          setIsAuthenticated(ok)
+          setSharedAuthFailed(!ok)
+        })
+      }
+    } else {
+      // Automatic reconnection if an API key has already been validated on
+      // this browser (see services/jakarto.ts — works around the CORS
+      // restriction on the session-check endpoint).
+      const storedApiKey = getStoredApiKey()
+      if (storedApiKey) {
+        authenticate(storedApiKey).then((ok) => {
+          if (!cancelled && ok) setIsAuthenticated(true)
+        })
+      }
+    }
+
+    return () => { cancelled = true }
+  }, [authMode, sharedApiKey])
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -750,7 +789,8 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
                   </div>
                 )}
               </div>
-              {isAuthenticated && (
+              {/* No logout with the shared key: there is no own key to sign back in with. */}
+              {isAuthenticated && authMode === 'personal' && (
                 <button
                   type="button"
                   className="jakartowns-viewer-icon-btn"
@@ -779,7 +819,19 @@ const Widget = (props: AllWidgetProps<IMConfig>) => {
             recreate it on its own in a new empty div.
           */}
           <div className={'jakartowns-viewer-panel-body' + (isPanelFolded ? ' jakartowns-viewer-panel-body--hidden' : '')}>
-            {!isAuthenticated && (
+            {!isAuthenticated && authMode === 'shared' && (
+              <div className="jakartowns-viewer-login">
+                {sharedApiKey && !sharedAuthFailed
+                  ? <p className="jakartowns-viewer-login-status" role="status">{messages.sharedKeyConnecting}</p>
+                  : (
+                  <p className="jakartowns-viewer-login-error" role="alert">
+                    {sharedApiKey ? messages.sharedKeyFailed : messages.sharedKeyMissing}
+                  </p>
+                    )}
+              </div>
+            )}
+
+            {!isAuthenticated && authMode === 'personal' && (
               <div className="jakartowns-viewer-login">
                 <h3 className="jakartowns-viewer-login-title">{messages.loginTitle}</h3>
                 {authFailed && <p className="jakartowns-viewer-login-error">{messages.loginError}</p>}

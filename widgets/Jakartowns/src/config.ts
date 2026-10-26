@@ -1,4 +1,5 @@
 import { type ImmutableObject } from 'jimu-core'
+import { type AuthMode } from './lib/authMode'
 import { type LanguageChoice } from './lib/locale'
 
 /**
@@ -24,6 +25,20 @@ export interface Config {
    * treats that as `'auto'`.
    */
   language: LanguageChoice
+  /**
+   * How people sign in: each with their own Jakarto API key (`'personal'`,
+   * the original behavior), or all through `sharedApiKey` (`'shared'`).
+   * Absent on widgets saved before this option existed — read both fields
+   * through `resolveAuthSetup`, which treats that as `'personal'`.
+   */
+  authMode: AuthMode
+  /**
+   * The key every visitor is signed in with in `'shared'` mode, `''`
+   * otherwise. Saved in the experience's configuration, which the browser
+   * downloads: anyone who can open the experience can read it — see
+   * docs/adr/0019-shared-api-key-chosen-by-the-experience-author.md.
+   */
+  sharedApiKey: string
 }
 
 export type IMConfig = ImmutableObject<Config>

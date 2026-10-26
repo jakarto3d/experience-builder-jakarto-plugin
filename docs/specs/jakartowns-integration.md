@@ -8,7 +8,11 @@
 
 1. The user provides their Jakarto API key (retrievable at
    `https://solutions.jakarto.com/profile`) — see
-   [ADR-0003](../adr/0003-per-user-api-key-authentication.md).
+   [ADR-0003](../adr/0003-per-user-api-key-authentication.md). Unless the
+   experience author chose a **shared key** in the settings panel, in which
+   case the widget uses that key for everyone and there is nothing to
+   provide — see
+   [ADR-0019](../adr/0019-shared-api-key-chosen-by-the-experience-author.md).
 2. It's exchanged for a session cookie via
    `POST https://account.jakarto.com/users/trade-api-key`
    (`credentials: 'include'`, `mode: 'cors'`). The cookie is expected to be
@@ -22,6 +26,8 @@
 
 The API key is cached in `localStorage` to skip re-entering it on every page
 load — see [ADR-0004](../adr/0004-cache-api-key-in-localstorage.md). The
+shared key is the exception: `authenticate(key, { remember: false })` never
+caches it, since it already lives in the experience's configuration. The
 older session-check endpoint (`GET account.jakarto.com/auth`) is blocked by
 CORS from most embedding origins and is not used to detect an active
 session.

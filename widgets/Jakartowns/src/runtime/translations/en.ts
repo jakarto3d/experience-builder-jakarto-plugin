@@ -12,6 +12,11 @@ const messages: typeof defaultMessages = {
   loginButtonLoading: 'Signing in…',
   loginError: 'Sign-in failed. Check your API key.',
   loginLink: 'Get your API key',
+  sharedKeyConnecting: 'Connecting to Jakarto…',
+  sharedKeyMissing:
+    'Unable to open the panorama: no shared API key has been set up for this experience. Contact whoever administers this experience.',
+  sharedKeyFailed:
+    'Unable to open the panorama: signing in to Jakarto with the shared API key of this experience failed. Contact whoever administers this experience.',
   logoutButton: 'Sign out',
   openInJakartownsLink: 'Open in Jakartowns ↗',
   foldPanel: 'Collapse',

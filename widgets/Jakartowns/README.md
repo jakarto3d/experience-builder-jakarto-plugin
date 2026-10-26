@@ -96,15 +96,50 @@ quoted elsewhere in this README ("Version du widget", "mise à jour non
 vérifiable") read "Widget version" and "Unable to check for updates" in
 English. See [ADR-0018](../../docs/adr/0018-built-in-english-translation.md).
 
+## Signing in
+
+Opening the panorama needs a Jakarto API key. Who provides it is the
+experience author's choice, in the **Jakarto sign-in** section of the
+settings panel ("Connexion Jakarto" in French) — see
+[ADR-0019](../../docs/adr/0019-shared-api-key-chosen-by-the-experience-author.md):
+
+- **Personal keys** (the default): each visitor signs in with their own
+  Jakarto API key, obtainable from https://solutions.jakarto.com/profile.
+  Everyone keeps their own access rights and usage statistics, and the key
+  stays with its owner. This is how the widget has always worked.
+- **Shared key**: the author enters one API key and the widget signs everyone
+  in with it. Visitors have nothing to enter — the panorama opens directly,
+  with no login form and no logout button, and they can't switch to a key of
+  their own. We recommend the key of a **dedicated Jakarto service account**
+  rather than a person's key.
+
+  Before choosing it, know what it costs. The settings panel shows the same
+  warning:
+  - the widget's settings are saved in the experience's configuration, which
+    every visitor's browser downloads: **anyone who can open the experience
+    can read the key**;
+  - the key gives access to everything the account's licence allows, not only
+    this widget, and it can't be restricted to the portal's domain;
+  - everyone has the same access, and usage is counted as a single total, so
+    misuse is hard to spot;
+  - if the experience is **public**, anyone on the Internet can take the key
+    and use it. This mode mostly suits experiences reserved for your
+    organization.
+
+  The key is saved when the field loses focus or Enter is pressed, and it is
+  erased from the configuration if you switch back to personal keys. If it is
+  missing or Jakarto doesn't accept it, visitors see a message saying the
+  panorama can't be opened and to contact whoever administers the
+  experience.
+
 ## Usage
 
-- A visitor must provide their own Jakarto API key (obtainable from
-  https://solutions.jakarto.com/profile) — product decision: no shared
-  default key. This key is cached in the browser's `localStorage` after a
-  successful login, to avoid re-entering it on every visit (the session
-  verification endpoint is blocked by CORS from most origins, so it can't
-  be relied on to detect an already-active session). Accepted trade-off:
-  the key is stored in plain text on the browser side, not encrypted.
+- In personal-keys mode, the key a visitor enters is cached in the browser's
+  `localStorage` after a successful login, to avoid re-entering it on every
+  visit (the session verification endpoint is blocked by CORS from most
+  origins, so it can't be relied on to detect an already-active session).
+  Accepted trade-off: the key is stored in plain text on the browser side, not
+  encrypted. A shared key is never written to `localStorage`.
 - The panorama lives in a **floating panel** above the map:
   - Collapsible/expandable via the chevron button in the title bar.
   - Movable by dragging its title bar (constrained to the widget's edges).

@@ -188,11 +188,22 @@ export function storeSettings(settings: JakartoWidgetSettings): void {
   writeLocalStorageItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
 }
 
+export interface AuthenticateOptions {
+  /**
+   * Cache the key in localStorage on success (the default). The experience's
+   * shared key passes `false`: it already lives in the experience's
+   * configuration, and writing it to storage would only leave a second copy
+   * behind in every visitor's browser — see
+   * docs/adr/0019-shared-api-key-chosen-by-the-experience-author.md.
+   */
+  remember?: boolean
+}
+
 /**
  * Exchanges a Jakarto API key for a session cookie, and caches it locally
  * on success to avoid re-asking for it on the widget's next load.
  */
-export async function authenticate(apiKey: string): Promise<boolean> {
+export async function authenticate(apiKey: string, { remember = true }: AuthenticateOptions = {}): Promise<boolean> {
   try {
     const response = await fetch(JAKARTO_LOGIN_URL, {
       method: 'POST',
@@ -201,7 +212,7 @@ export async function authenticate(apiKey: string): Promise<boolean> {
       mode: 'cors',
       body: JSON.stringify({ apiKey })
     })
-    if (response.ok) {
+    if (response.ok && remember) {
       storeApiKey(apiKey)
     }
     return response.ok

@@ -45,6 +45,17 @@ into an ADR if it changes a decision.
   jimu-ui `Select` for "Default language" lays out in the settings panel.
   Not covered: the embedded Jakartowns viewer's own UI, and the French
   tutorial on docs.jakarto.com.
+- **Shared API key**
+  ([ADR-0019](adr/0019-shared-api-key-chosen-by-the-experience-author.md)):
+  the mode switch, the key being kept out of `localStorage`, the missing/failed
+  messages and the pure `resolveAuthSetup` are checked by tests, the portal
+  build and a type-check against the real jimu types, but none of it has been
+  looked at in a running builder or against a live portal. In particular:
+  how the "Jakarto sign-in" section lays out (the `Select`, the masked
+  `TextInput` saving on blur/Enter, the warning `Alert` and its list); and
+  what the service account's session cookie does to a visitor's own Jakarto
+  session in the same browser, and to "Open in Jakartowns" (expected: it
+  replaces it, and the link opens as the service account).
 - **Vector-tile availability layer**: removed due to a CORS/cookie
   limitation (see [ADR-0006](adr/0006-remove-jakman-availability-layer.md)).
   Would need Jakarto to expose that endpoint with cross-origin support (or a
