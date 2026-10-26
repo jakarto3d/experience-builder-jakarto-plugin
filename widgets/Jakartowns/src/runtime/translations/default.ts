@@ -8,6 +8,11 @@ export default {
   loginButtonLoading: 'Connexion…',
   loginError: "Échec de la connexion. Vérifiez votre clé d'API.",
   loginLink: 'Récupérer votre clé API',
+  sharedKeyConnecting: 'Connexion à Jakarto…',
+  sharedKeyMissing:
+    "Impossible d'ouvrir le panorama : aucune clé d'API partagée n'est configurée pour cette expérience. Contactez la personne qui administre cette expérience.",
+  sharedKeyFailed:
+    "Impossible d'ouvrir le panorama : la connexion à Jakarto avec la clé d'API partagée de cette expérience a échoué. Contactez la personne qui administre cette expérience.",
   logoutButton: 'Déconnexion',
   openInJakartownsLink: 'Ouvrir dans Jakartowns ↗',
   foldPanel: 'Replier',

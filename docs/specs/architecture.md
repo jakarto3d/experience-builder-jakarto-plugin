@@ -22,6 +22,7 @@ client/
             └── src/
                 ├── config.ts
                 ├── lib/locale.ts                 (language selection, shared)
+                ├── lib/authMode.ts               (sign-in mode, shared)
                 ├── runtime/
                 │   ├── widget.tsx
                 │   ├── widget.css
@@ -54,7 +55,8 @@ JavaScript SDK (and the Map-widget-binding hooks) requires declaring the
 Source: [Widget manifest](https://developers.arcgis.com/experience-builder/guide/widget-manifest/)
 
 `config.json` holds the default values for `src/config.ts`'s `Config`
-interface (currently just `fallbackLatitude`/`fallbackLongitude`). Without
+interface (`fallbackLatitude`/`fallbackLongitude`, `compassEnabled`,
+`language`, `authMode` and `sharedApiKey`). Without
 this file, Experience Builder marks the widget `hasConfig: false` and
 `props.config` stays undefined, which crashes the settings panel — see
 `src/config.ts` and [ADR-0001](../adr/0001-scaffold-without-local-dev-edition.md).
@@ -75,7 +77,8 @@ for why this pattern was chosen over Message Actions or an iframe.
 ## 4. Runtime components
 
 - **`widget.tsx`** — the React component tree: floating panel (drag/resize/
-  fold), login form, panorama container, multipass timeline, settings
+  fold), login form (or, with a shared key, a sign-in status message),
+  panorama container, multipass timeline, settings
   popover, and the map-side position/orientation indicator (an ArcGIS
   `GraphicsLayer` with a single repositioned/reoriented `Graphic`, not
   recreated on every update). See
@@ -90,8 +93,10 @@ for why this pattern was chosen over Message Actions or an iframe.
 ## 5. Setting components
 
 - **`setting.tsx`** — the settings panel: the `MapWidgetSelector` binding
-  (section 3), the panorama options backed by `config.json`, and the
-  "Widget version" section ("Version du widget" in French).
+  (section 3), the "Jakarto sign-in" section ("Connexion Jakarto" in French —
+  personal keys or a shared key, section 7), the panorama options backed by
+  `config.json`, and the "Widget version" section ("Version du widget" in
+  French).
 - **`components/UpdateNotice.tsx` + `lib/updateCheck.ts`** — compares
   `props.manifest.version` (injected by the framework) against the latest
   published GitHub release, so whoever installed the widget on a portal
@@ -114,7 +119,21 @@ the same choice; the settings panel itself follows `props.locale` only.
 [ADR-0018](../adr/0018-built-in-english-translation.md). A new UI string goes
 in `default.ts` first, then `en.ts` (the compiler flags it if it's missing).
 
-## 7. Validation limits
+## 7. Sign-in mode
+
+The experience author chooses, in the settings panel, how people sign in:
+`config.authMode` is `personal` (the default — each visitor enters their own
+Jakarto API key) or `shared` (the author enters one key, `config.sharedApiKey`,
+and the widget signs everyone in with it). `lib/authMode.ts` reads both fields
+and treats anything unknown, or a config saved before the option existed, as
+`personal`; it ignores `sharedApiKey` outside shared mode. In shared mode the
+runtime shows no login form and no logout button, never reads or writes the
+key in `localStorage`, and tells visitors to contact whoever administers the
+experience if the key is missing or fails. Switching back to personal keys
+erases the stored key. See
+[ADR-0019](../adr/0019-shared-api-key-chosen-by-the-experience-author.md).
+
+## 8. Validation limits
 
 Without a local Developer Edition, `jimu-core` / `jimu-ui` / `jimu-arcgis`
 cannot be installed as regular npm dependencies. Code here is written to be

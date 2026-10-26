@@ -44,3 +44,4 @@ messages follow a `feat(widget)`/`fix(widget)`/`docs` convention.
 | [`adr/0016`](adr/0016-rehearsable-release-build.md) | Making the release build rehearsable locally before tagging |
 | [`adr/0017`](adr/0017-in-builder-update-notification.md) | Signalling a new release in the settings panel |
 | [`adr/0018`](adr/0018-built-in-english-translation.md) | Built-in English translation, chosen from the builder's locale |
+| [`adr/0019`](adr/0019-shared-api-key-chosen-by-the-experience-author.md) | Shared API key chosen by the experience author (amends 0003) |

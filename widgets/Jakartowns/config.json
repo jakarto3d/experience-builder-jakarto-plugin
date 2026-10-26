@@ -2,5 +2,7 @@
   "fallbackLatitude": 45.7476,
   "fallbackLongitude": -73.6005,
   "compassEnabled": true,
-  "language": "auto"
+  "language": "auto",
+  "authMode": "personal",
+  "sharedApiKey": ""
 }

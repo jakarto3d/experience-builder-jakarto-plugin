@@ -306,6 +306,12 @@
   text-align: center;
 }
 
+.jakartowns-viewer-login-status {
+  color: var(--jaku-neutral-900);
+  font-size: 0.8rem;
+  text-align: center;
+}
+
 .jakartowns-viewer-login-form {
   display: flex;
   flex-direction: column;
